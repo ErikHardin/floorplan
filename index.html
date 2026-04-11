@@ -19,24 +19,31 @@
     body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(59,130,246,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(59,130,246,.04) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
     .container{max-width:1180px;margin:0 auto;position:relative;z-index:1}
 
-    /* API key */
+    /* API key button */
     .api-key-btn{position:fixed;top:16px;right:16px;z-index:500;width:32px;height:32px;border-radius:50%;background:var(--surface);border:1px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:border-color .2s,box-shadow .2s;opacity:.45}
     .api-key-btn:hover{opacity:1;border-color:var(--accent);box-shadow:0 0 10px var(--accent-glow)}
-    .api-key-btn.key-set{opacity:1;border-color:var(--green);box-shadow:0 0 8px rgba(34,197,94,.3)}
+    .api-key-btn.keys-set{opacity:1;border-color:var(--green);box-shadow:0 0 8px rgba(34,197,94,.3)}
+    .api-key-btn.partial{opacity:1;border-color:var(--amber);box-shadow:0 0 8px rgba(245,158,11,.3)}
+
+    /* Modal */
     .modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:600;align-items:center;justify-content:center}
     .modal-backdrop.visible{display:flex}
-    .modal{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:28px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+    .modal{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:28px;width:100%;max-width:460px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
     .modal-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:#fff;margin-bottom:6px}
-    .modal-sub{font-size:11px;color:var(--muted);margin-bottom:18px;line-height:1.6}
+    .modal-sub{font-size:11px;color:var(--muted);margin-bottom:20px;line-height:1.6}
     .modal-sub a{color:var(--accent);text-decoration:none}
     .modal-sub a:hover{text-decoration:underline}
-    .key-input-wrap{position:relative;margin-bottom:14px}
+    .key-group{margin-bottom:16px}
+    .key-group-label{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;gap:6px}
+    .key-set-dot{width:6px;height:6px;border-radius:50%;background:var(--border);flex-shrink:0}
+    .key-set-dot.set{background:var(--green)}
+    .key-input-wrap{position:relative}
     .key-input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px 40px 10px 12px;font-family:'DM Mono',monospace;font-size:12px;color:var(--text);outline:none;transition:border-color .2s}
     .key-input:focus{border-color:var(--accent)}
     .key-input::placeholder{color:#3a4056}
     .key-toggle{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0;line-height:1}
     .key-toggle:hover{color:var(--text)}
-    .modal-actions{display:flex;gap:8px}
+    .modal-actions{display:flex;gap:8px;margin-top:4px}
     .btn-save-key{flex:1;padding:10px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:background .2s}
     .btn-save-key:hover{background:#2563eb}
     .btn-cancel-key{padding:10px 16px;background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;font-family:'DM Mono',monospace;font-size:12px;cursor:pointer;transition:border-color .15s,color .15s}
@@ -117,12 +124,10 @@
     .viewer-panel{flex:1 1 56%;min-width:0;position:sticky;top:20px}
     .panel-label{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
     .panel-hint{font-family:'DM Mono',monospace;font-size:10px;color:#3a4056;font-weight:400;text-transform:none;letter-spacing:0}
-    .locate-progress{font-family:'DM Mono',monospace;font-size:10px;color:var(--amber);font-weight:400;text-transform:none;letter-spacing:0;display:none}
-    .locate-progress.visible{display:inline}
     .pdf-canvas-wrap{position:relative;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#1a1d27;line-height:0}
     .pdf-canvas-wrap canvas.pdf-c{display:block;width:100%;height:auto}
     .pdf-canvas-wrap canvas.hl-c{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
-    .png-viewer-img{display:block;width:100%;height:auto;border-radius:7px}
+    .viewer-img{display:block;width:100%;height:auto;border-radius:7px}
     .page-controls{display:none;align-items:center;gap:10px;margin-top:8px;font-size:12px;color:var(--muted)}
     .btn-page{background:var(--surface);border:1px solid var(--border);color:var(--muted);font-family:'DM Mono',monospace;font-size:12px;padding:4px 10px;border-radius:4px;cursor:pointer;transition:border-color .15s,color .15s}
     .btn-page:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
@@ -159,18 +164,37 @@
 </head>
 <body>
 
-<button class="api-key-btn" id="apiKeyBtn" title="API Key">🔑</button>
+<button class="api-key-btn" id="apiKeyBtn" title="API Keys">🔑</button>
 
 <div class="modal-backdrop" id="modalBackdrop">
   <div class="modal">
-    <div class="modal-title">Anthropic API Key</div>
-    <div class="modal-sub">Stored in memory only — never saved or sent anywhere except directly to Anthropic.<br/>Get a key at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a></div>
-    <div class="key-input-wrap">
-      <input class="key-input" type="password" id="keyInput" placeholder="sk-ant-api03-…" autocomplete="off" spellcheck="false"/>
-      <button class="key-toggle" id="keyToggle">👁</button>
+    <div class="modal-title">API Keys</div>
+    <div class="modal-sub">Both keys are stored in memory only — never saved or sent anywhere except their respective APIs.</div>
+
+    <div class="key-group">
+      <div class="key-group-label">
+        <span class="key-set-dot" id="dot-anthropic"></span>
+        Anthropic (room extraction) &nbsp;·&nbsp; <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>
+      </div>
+      <div class="key-input-wrap">
+        <input class="key-input" type="password" id="keyAnthropic" placeholder="sk-ant-api03-…" autocomplete="off" spellcheck="false"/>
+        <button class="key-toggle" data-target="keyAnthropic">👁</button>
+      </div>
     </div>
+
+    <div class="key-group">
+      <div class="key-group-label">
+        <span class="key-set-dot" id="dot-google"></span>
+        Google Vision (text location) &nbsp;·&nbsp; <a href="https://console.cloud.google.com" target="_blank">console.cloud.google.com</a>
+      </div>
+      <div class="key-input-wrap">
+        <input class="key-input" type="password" id="keyGoogle" placeholder="AIza…" autocomplete="off" spellcheck="false"/>
+        <button class="key-toggle" data-target="keyGoogle">👁</button>
+      </div>
+    </div>
+
     <div class="modal-actions">
-      <button class="btn-save-key" id="saveKeyBtn">Save Key</button>
+      <button class="btn-save-key" id="saveKeyBtn">Save Keys</button>
       <button class="btn-cancel-key" id="cancelKeyBtn">Cancel</button>
     </div>
     <div class="key-status-msg" id="keyStatusMsg"></div>
@@ -181,7 +205,7 @@
   <header>
     <div class="tag">ECH Technical Solutions</div>
     <h1>Floor Plan<br/><span>Room Extractor</span></h1>
-    <p class="subtitle">Upload up to 10 floor plans (PDF, PNG, or JPG). Rooms are extracted first, then Claude locates each one precisely for hover highlighting.</p>
+    <p class="subtitle">Upload up to 10 floor plans (PDF, PNG, or JPG). Claude extracts rooms — Google Vision locates each label precisely on the map.</p>
   </header>
 
   <div class="upload-zone" id="dropZone">
@@ -212,7 +236,7 @@
     <div id="tabPanels"></div>
   </div>
 
-  <footer>Floor Plan Room Extractor &nbsp;·&nbsp; ECH Technical Solutions &nbsp;·&nbsp; Powered by Claude AI</footer>
+  <footer>Floor Plan Room Extractor &nbsp;·&nbsp; ECH Technical Solutions &nbsp;·&nbsp; Powered by Claude AI + Google Vision</footer>
 </div>
 
 <div id="tooltip"></div>
@@ -221,243 +245,324 @@
   pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   const $ = id => document.getElementById(id);
 
-  // ── API Key ────────────────────────────────────────────────────────────────
-  let apiKey = '';
-  const apiKeyBtn=$('apiKeyBtn'),modalBackdrop=$('modalBackdrop'),keyInput=$('keyInput');
-  const keyToggle=$('keyToggle'),saveKeyBtn=$('saveKeyBtn'),cancelKeyBtn=$('cancelKeyBtn'),keyStatusMsg=$('keyStatusMsg');
-  apiKeyBtn.addEventListener('click',()=>{ keyInput.value=apiKey; keyStatusMsg.textContent=''; keyStatusMsg.className='key-status-msg'; modalBackdrop.classList.add('visible'); setTimeout(()=>keyInput.focus(),50); });
-  cancelKeyBtn.addEventListener('click',()=>modalBackdrop.classList.remove('visible'));
-  modalBackdrop.addEventListener('click',e=>{ if(e.target===modalBackdrop) modalBackdrop.classList.remove('visible'); });
-  keyToggle.addEventListener('click',()=>{ keyInput.type=keyInput.type==='password'?'text':'password'; });
-  keyInput.addEventListener('keydown',e=>{ if(e.key==='Enter') saveKey(); });
-  saveKeyBtn.addEventListener('click',saveKey);
-  function saveKey(){
-    const val=keyInput.value.trim();
-    if(!val){ keyStatusMsg.textContent='Please enter a key.'; keyStatusMsg.className='key-status-msg err'; return; }
-    if(!val.startsWith('sk-ant-')){ keyStatusMsg.textContent='Key should start with sk-ant- — double check it.'; keyStatusMsg.className='key-status-msg err'; return; }
-    apiKey=val; apiKeyBtn.classList.add('key-set'); apiKeyBtn.title='API Key (set ✓)';
-    keyStatusMsg.textContent='✓ Key saved for this session.'; keyStatusMsg.className='key-status-msg ok';
-    setTimeout(()=>modalBackdrop.classList.remove('visible'),800);
+  // ── API Keys ───────────────────────────────────────────────────────────────
+  let anthropicKey = '', googleKey = '';
+
+  const apiKeyBtn=$('apiKeyBtn'), modalBackdrop=$('modalBackdrop');
+  const keyAnthropic=$('keyAnthropic'), keyGoogle=$('keyGoogle');
+  const saveKeyBtn=$('saveKeyBtn'), cancelKeyBtn=$('cancelKeyBtn'), keyStatusMsg=$('keyStatusMsg');
+
+  apiKeyBtn.addEventListener('click', () => {
+    keyAnthropic.value = anthropicKey;
+    keyGoogle.value = googleKey;
+    keyStatusMsg.textContent = ''; keyStatusMsg.className = 'key-status-msg';
+    modalBackdrop.classList.add('visible');
+    setTimeout(() => keyAnthropic.focus(), 50);
+  });
+  cancelKeyBtn.addEventListener('click', () => modalBackdrop.classList.remove('visible'));
+  modalBackdrop.addEventListener('click', e => { if(e.target===modalBackdrop) modalBackdrop.classList.remove('visible'); });
+
+  document.querySelectorAll('.key-toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const inp = $(btn.dataset.target);
+      inp.type = inp.type === 'password' ? 'text' : 'password';
+    });
+  });
+
+  saveKeyBtn.addEventListener('click', () => {
+    const ak = keyAnthropic.value.trim();
+    const gk = keyGoogle.value.trim();
+    if (!ak && !gk) { keyStatusMsg.textContent = 'Please enter at least one key.'; keyStatusMsg.className = 'key-status-msg err'; return; }
+    if (ak && !ak.startsWith('sk-ant-')) { keyStatusMsg.textContent = 'Anthropic key should start with sk-ant-'; keyStatusMsg.className = 'key-status-msg err'; return; }
+    if (gk && !gk.startsWith('AIza')) { keyStatusMsg.textContent = 'Google key should start with AIza'; keyStatusMsg.className = 'key-status-msg err'; return; }
+    anthropicKey = ak; googleKey = gk;
+    updateKeyBtn();
+    keyStatusMsg.textContent = '✓ Keys saved for this session.'; keyStatusMsg.className = 'key-status-msg ok';
+    setTimeout(() => modalBackdrop.classList.remove('visible'), 800);
+  });
+
+  function updateKeyBtn() {
+    $('dot-anthropic').classList.toggle('set', !!anthropicKey);
+    $('dot-google').classList.toggle('set', !!googleKey);
+    if (anthropicKey && googleKey) { apiKeyBtn.className = 'api-key-btn keys-set'; apiKeyBtn.title = 'API Keys (both set ✓)'; }
+    else if (anthropicKey || googleKey) { apiKeyBtn.className = 'api-key-btn partial'; apiKeyBtn.title = 'API Keys (partially set)'; }
+    else { apiKeyBtn.className = 'api-key-btn'; apiKeyBtn.title = 'API Keys'; }
   }
 
   // ── File helpers ───────────────────────────────────────────────────────────
-  function fileType(f){ if(f.type==='application/pdf') return 'pdf'; if(f.type.startsWith('image/')) return 'image'; const e=f.name.split('.').pop().toLowerCase(); if(e==='pdf') return 'pdf'; if(['png','jpg','jpeg'].includes(e)) return 'image'; return null; }
-  function fileIcon(f){ return fileType(f)==='pdf'?'📄':'🖼️'; }
-  function fileTypeLabel(f){ return f.name.split('.').pop().toUpperCase(); }
+  function fileType(f) { if(f.type==='application/pdf') return 'pdf'; if(f.type.startsWith('image/')) return 'image'; const e=f.name.split('.').pop().toLowerCase(); return e==='pdf'?'pdf':['png','jpg','jpeg'].includes(e)?'image':null; }
+  function fileIcon(f) { return fileType(f)==='pdf'?'📄':'🖼️'; }
+  function fileTypeLabel(f) { return f.name.split('.').pop().toUpperCase(); }
 
   // ── State ──────────────────────────────────────────────────────────────────
-  // Each state: { file, name, type, rooms:[], b64, pdfDoc, imgSrc, currentPage, totalPages }
   let fileStates = [];
+  const dropZone=$('dropZone'), fileInput=$('fileInput'), fileQueue=$('fileQueue');
+  const extractBtn=$('extractBtn'), clearBtn=$('clearBtn');
+  const statusBar=$('statusBar'), statusDot=$('statusDot'), statusTextEl=$('statusText');
+  const errorBox=$('errorBox'), resultsArea=$('resultsArea');
+  const tabsHeader=$('tabsHeader'), tabPanelsEl=$('tabPanels'), tooltip=$('tooltip');
 
-  const dropZone=$('dropZone'),fileInput=$('fileInput'),fileQueue=$('fileQueue');
-  const extractBtn=$('extractBtn'),clearBtn=$('clearBtn');
-  const statusBar=$('statusBar'),statusDot=$('statusDot'),statusText_el=$('statusText');
-  const errorBox=$('errorBox'),resultsArea=$('resultsArea');
-  const tabsHeader=$('tabsHeader'),tabPanels_el=$('tabPanels'),tooltip=$('tooltip');
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+  dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('dragover'); addFiles([...e.dataTransfer.files].filter(f=>fileType(f))); });
+  fileInput.addEventListener('change', () => { addFiles([...fileInput.files]); fileInput.value=''; });
 
-  dropZone.addEventListener('dragover',e=>{ e.preventDefault(); dropZone.classList.add('dragover'); });
-  dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('dragover'));
-  dropZone.addEventListener('drop',e=>{ e.preventDefault(); dropZone.classList.remove('dragover'); addFiles([...e.dataTransfer.files].filter(f=>fileType(f))); });
-  fileInput.addEventListener('change',()=>{ addFiles([...fileInput.files]); fileInput.value=''; });
-
-  function addFiles(files){
-    const remaining=10-fileStates.length;
-    files.slice(0,remaining).forEach(f=>{ if(!fileType(f)) return; fileStates.push({file:f,name:f.name,type:fileType(f),rooms:null,b64:null,pdfDoc:null,imgSrc:null,currentPage:1,totalPages:1}); });
-    renderQueue(); extractBtn.disabled=fileStates.length===0;
+  function addFiles(files) {
+    const remaining = 10 - fileStates.length;
+    files.slice(0, remaining).forEach(f => {
+      if (!fileType(f)) return;
+      fileStates.push({ file:f, name:f.name, type:fileType(f), rooms:null, b64:null, pdfDoc:null, currentPage:1, totalPages:1, visionWords:[] });
+    });
+    renderQueue(); extractBtn.disabled = fileStates.length === 0;
   }
 
-  function renderQueue(){
-    if(!fileStates.length){ fileQueue.classList.remove('visible'); return; }
-    fileQueue.classList.add('visible'); fileQueue.innerHTML='';
-    fileStates.forEach((s,i)=>{
-      const div=document.createElement('div'); div.className='file-item'; div.id=`fi-${i}`;
-      div.innerHTML=`<span class="fi-icon">${fileIcon(s.file)}</span><span class="fi-name">${esc(s.name)}</span><span class="fi-type">${fileTypeLabel(s.file)}</span><span class="fi-status" id="fis-${i}">Ready</span><button class="fi-remove" data-idx="${i}">✕</button>`;
+  function renderQueue() {
+    if (!fileStates.length) { fileQueue.classList.remove('visible'); return; }
+    fileQueue.classList.add('visible'); fileQueue.innerHTML = '';
+    fileStates.forEach((s, i) => {
+      const div = document.createElement('div'); div.className='file-item'; div.id=`fi-${i}`;
+      div.innerHTML = `<span class="fi-icon">${fileIcon(s.file)}</span><span class="fi-name">${esc(s.name)}</span><span class="fi-type">${fileTypeLabel(s.file)}</span><span class="fi-status" id="fis-${i}">Ready</span><button class="fi-remove" data-idx="${i}">✕</button>`;
       fileQueue.appendChild(div);
     });
-    fileQueue.querySelectorAll('.fi-remove').forEach(btn=>{ btn.addEventListener('click',()=>{ fileStates.splice(+btn.dataset.idx,1); renderQueue(); extractBtn.disabled=fileStates.length===0; }); });
+    fileQueue.querySelectorAll('.fi-remove').forEach(btn => {
+      btn.addEventListener('click', () => { fileStates.splice(+btn.dataset.idx, 1); renderQueue(); extractBtn.disabled = fileStates.length === 0; });
+    });
   }
 
-  clearBtn.addEventListener('click',()=>{ fileStates=[]; renderQueue(); extractBtn.disabled=true; hideResults(); errorBox.classList.remove('visible'); statusBar.classList.remove('visible'); });
-  function hideResults(){ resultsArea.classList.remove('visible'); tabsHeader.innerHTML=''; tabPanels_el.innerHTML=''; }
+  clearBtn.addEventListener('click', () => { fileStates=[]; renderQueue(); extractBtn.disabled=true; hideResults(); errorBox.classList.remove('visible'); statusBar.classList.remove('visible'); });
+  function hideResults() { resultsArea.classList.remove('visible'); tabsHeader.innerHTML=''; tabPanelsEl.innerHTML=''; }
 
   // ── Main extract ───────────────────────────────────────────────────────────
-  extractBtn.addEventListener('click',async()=>{
-    if(!fileStates.length) return;
-    if(!apiKey){ errorBox.textContent='No API key set. Click the 🔑 button to add your Anthropic API key.'; errorBox.classList.add('visible'); return; }
+  extractBtn.addEventListener('click', async () => {
+    if (!fileStates.length) return;
+    if (!anthropicKey) { errorBox.textContent='Anthropic API key required. Click 🔑 to add it.'; errorBox.classList.add('visible'); return; }
     errorBox.classList.remove('visible');
-    extractBtn.classList.add('loading'); extractBtn.disabled=true;
-    fileStates.forEach(s=>{ s.rooms=null; s.b64=null; s.pdfDoc=null; s.imgSrc=null; });
+    extractBtn.classList.add('loading'); extractBtn.disabled = true;
+    fileStates.forEach(s => { s.rooms=null; s.b64=null; s.pdfDoc=null; s.visionWords=[]; });
     hideResults(); buildTabs(); resultsArea.classList.add('visible');
-    setStatus(`Step 1 of 2 — Extracting rooms from ${fileStates.length} floor plan${fileStates.length>1?'s':''}…`);
+    setStatus(`Step 1 — Extracting rooms from ${fileStates.length} floor plan${fileStates.length>1?'s':''}…`);
 
-    // PASS 1: Extract rooms for all files in parallel
-    await Promise.all(fileStates.map((s,i)=>pass1_extract(s,i)));
+    // Run both passes in parallel per file
+    await Promise.all(fileStates.map((s, i) => processFile(s, i)));
 
-    // PASS 2: Locate rooms for all files in parallel
-    const withRooms=fileStates.filter(s=>s.rooms&&s.rooms.length>0);
-    if(withRooms.length){
-      setStatus(`Step 2 of 2 — Locating rooms on floor plans (this may take a moment)…`);
-      await Promise.all(fileStates.map((s,i)=>pass2_locate(s,i)));
-    }
-
-    const doneCount=fileStates.filter(s=>s.rooms&&s.rooms.length>0).length;
-    const errCount=fileStates.filter(s=>s.rooms===null).length;
-    let msg=`✓ Complete — ${doneCount} file${doneCount!==1?'s':''} processed`;
-    if(errCount) msg+=`, ${errCount} failed`;
-    setStatus(msg,true);
-    extractBtn.classList.remove('loading'); extractBtn.disabled=false;
+    const doneCount = fileStates.filter(s => s.rooms && s.rooms.length > 0).length;
+    const errCount  = fileStates.filter(s => s.rooms === null).length;
+    let msg = `✓ Complete — ${doneCount} file${doneCount!==1?'s':''} processed`;
+    if (errCount) msg += `, ${errCount} failed`;
+    setStatus(msg, true);
+    extractBtn.classList.remove('loading'); extractBtn.disabled = false;
   });
 
-  // ── Pass 1: Extract room names/numbers ────────────────────────────────────
-  async function pass1_extract(s,i){
-    setFileStatus(i,'processing','Pass 1: Extracting rooms…');
-    updateTabDot(i,'processing');
-    try{
-      // Load viewer + get base64
-      if(s.type==='pdf'){
-        const buf=await toArrayBuffer(s.file);
-        s.pdfDoc=await pdfjsLib.getDocument({data:buf}).promise;
-        s.totalPages=s.pdfDoc.numPages; s.currentPage=1;
-        await renderPdfPage(s,i);
+  async function processFile(s, i) {
+    setFileStatus(i, 'processing', 'Reading floor plan…');
+    updateTabDot(i, 'processing');
+    try {
+      // Load viewer + base64
+      s.b64 = await toBase64(s.file);
+      if (s.type === 'pdf') {
+        const buf = await toArrayBuffer(s.file);
+        s.pdfDoc = await pdfjsLib.getDocument({data:buf}).promise;
+        s.totalPages = s.pdfDoc.numPages; s.currentPage = 1;
+        await renderPdfPage(s, i);
       } else {
-        renderImageViewer(s,i);
+        renderImageViewer(s, i);
       }
-      s.b64=await toBase64(s.file);
 
-      const mt=s.type==='pdf'?'application/pdf':(s.file.type==='image/png'?'image/png':'image/jpeg');
-      const contentBlock=s.type==='pdf'
-        ?{type:'document',source:{type:'base64',media_type:mt,data:s.b64}}
-        :{type:'image',source:{type:'base64',media_type:mt,data:s.b64}};
-
-      const resp=await callClaude([
-        contentBlock,
-        {type:'text',text:`Analyze this floor plan and extract every labeled room.
-
-For each room return ONLY:
-- room_number: room number/ID — empty string if none
-- room_name: descriptive name (e.g. "Patient Room", "Nurses Station")
-- floor: floor/level — empty string if unknown
-- notes: extra label info — empty string if none
-- page: page number (1 for images)
-
-Do NOT include bbox coordinates — that comes separately.
-Respond ONLY with raw JSON, no markdown:
-{"rooms":[{"room_number":"","room_name":"","floor":"","notes":"","page":1}]}`}
+      // Run Claude + Google Vision in parallel
+      setFileStatus(i, 'processing', 'Claude + Vision running…');
+      const [rooms, visionWords] = await Promise.all([
+        runClaude(s),
+        googleKey ? runGoogleVision(s) : Promise.resolve([])
       ]);
 
-      let parsed;
-      try{ parsed=JSON.parse(resp.replace(/```json|```/g,'').trim()); }
-      catch{ throw new Error('Could not parse room extraction response.'); }
+      s.rooms = rooms.map(r => ({...r, bbox:null}));
+      s.visionWords = visionWords;
 
-      s.rooms=(parsed.rooms||[]).map(r=>({...r,bbox:[0,0,0,0]}));
-      populateTable(s,i);
-      setFileStatus(i,'locating',`${s.rooms.length} rooms found — locating…`);
-      updateTabDot(i,'locating');
-      updateTabBadge(i,s.rooms.length);
-    }catch(err){
-      s.rooms=[];
-      showTableError(i,err.message);
-      setFileStatus(i,'error','Error'); updateTabDot(i,'error');
+      // Match room labels to Vision words
+      matchRoomsToVision(s);
+
+      populateTable(s, i);
+      updateTabBadge(i, s.rooms.length);
+      setFileStatus(i, 'done', `${s.rooms.length} rooms`);
+      updateTabDot(i, 'done');
+
+      if (s.type==='pdf' && s.totalPages>1) { $(`pgctrl-${i}`).style.display='flex'; updatePageCtrl(i); }
+
+    } catch(err) {
+      s.rooms = [];
+      showTableError(i, err.message);
+      setFileStatus(i, 'error', 'Error'); updateTabDot(i, 'error');
     }
   }
 
-  // ── Pass 2: Locate each room with focused coordinate pass ─────────────────
-  async function pass2_locate(s,i){
-    if(!s.rooms||!s.rooms.length||!s.b64) return;
+  // ── Claude: extract rooms ──────────────────────────────────────────────────
+  async function runClaude(s) {
+    const mt = s.type==='pdf' ? 'application/pdf' : (s.file.type==='image/png'?'image/png':'image/jpeg');
+    const contentBlock = s.type==='pdf'
+      ? {type:'document', source:{type:'base64', media_type:mt, data:s.b64}}
+      : {type:'image',    source:{type:'base64', media_type:mt, data:s.b64}};
 
-    const prog=$(`locate-prog-${i}`);
-    if(prog) prog.classList.add('visible');
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':anthropicKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514', max_tokens:4000,
+        messages:[{role:'user', content:[
+          contentBlock,
+          {type:'text', text:`Analyze this floor plan and extract every labeled room.
+Return JSON only, no markdown:
+{"rooms":[{"room_number":"","room_name":"","floor":"","notes":"","page":1}]}`}
+        ]}]
+      })
+    });
+    if (!resp.ok) { const e=await resp.json().catch(()=>({})); throw new Error(e?.error?.message||`Claude API error ${resp.status}`); }
+    const data = await resp.json();
+    const raw = data.content.map(b=>b.text||'').join('');
+    const parsed = JSON.parse(raw.replace(/```json|```/g,'').trim());
+    return parsed.rooms || [];
+  }
 
-    try{
-      const mt=s.type==='pdf'?'application/pdf':(s.file.type==='image/png'?'image/png':'image/jpeg');
-      const contentBlock=s.type==='pdf'
-        ?{type:'document',source:{type:'base64',media_type:mt,data:s.b64}}
-        :{type:'image',source:{type:'base64',media_type:mt,data:s.b64}};
+  // ── Google Vision: get all text + pixel coordinates ────────────────────────
+  async function runGoogleVision(s) {
+    // For PDFs we use the first page rendered as image (already on canvas)
+    // For images we send the base64 directly
+    let imageB64 = s.b64;
+    let mimeType = s.file.type === 'image/png' ? 'image/png' : 'image/jpeg';
 
-      // Build room list for Claude
-      const roomList=s.rooms.map((r,idx)=>{
-        const label=[r.room_number,r.room_name].filter(Boolean).join(' ');
-        return `${idx}: "${label}" (page ${r.page||1})`;
-      }).join('\n');
+    // If PDF, render page 1 to a canvas and grab its PNG
+    if (s.type === 'pdf') {
+      imageB64 = await pdfPageToBase64(s, 1);
+      mimeType = 'image/png';
+    }
 
-      if(prog) prog.textContent=`· Locating ${s.rooms.length} rooms…`;
+    const resp = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${googleKey}`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        requests:[{
+          image:{content: imageB64},
+          features:[{type:'TEXT_DETECTION', maxResults:500}]
+        }]
+      })
+    });
+    if (!resp.ok) { console.warn('Google Vision error', resp.status); return []; }
+    const data = await resp.json();
+    const annotations = data.responses?.[0]?.textAnnotations || [];
+    // Skip first annotation (it's the full text block), use word-level ones
+    return annotations.slice(1).map(a => ({
+      text: a.description,
+      vertices: a.boundingPoly?.vertices || []
+    }));
+  }
 
-      const resp=await callClaude([
-        contentBlock,
-        {type:'text',text:`This floor plan has the following labeled rooms. Your ONLY job is to find the exact location of each room on the floor plan and return its bounding box.
+  async function pdfPageToBase64(s, pageNum) {
+    const page = await s.pdfDoc.getPage(pageNum);
+    const vp = page.getViewport({scale:2}); // higher res for better OCR
+    const canvas = document.createElement('canvas');
+    canvas.width = vp.width; canvas.height = vp.height;
+    await page.render({canvasContext:canvas.getContext('2d'), viewport:vp}).promise;
+    return canvas.toDataURL('image/png').split(',')[1];
+  }
 
-ROOMS TO LOCATE:
-${roomList}
+  // ── Match room names to Vision words ──────────────────────────────────────
+  // Strategy: for each room, find the Vision word(s) that best match the
+  // room number or room name text, then use those pixel coordinates.
+  function matchRoomsToVision(s) {
+    if (!s.visionWords.length) return;
 
-For EACH room, return its bounding box as percentages of the total image/page dimensions:
-- x_pct: left edge of the room label/area as % of total width (0=left edge, 100=right edge)
-- y_pct: top edge of the room label/area as % of total height (0=top, 100=bottom)
-- w_pct: width of the room area as % of total width
-- h_pct: height of the room area as % of total height
+    // Build a flat string→bbox lookup from Vision words
+    // Group nearby words into phrases for better matching
+    const words = s.visionWords;
 
-Be as precise as possible. Look carefully at where each room label actually appears on the floor plan.
-If a room truly cannot be found, use [0,0,0,0].
+    s.rooms.forEach(room => {
+      const candidates = [room.room_number, room.room_name].filter(Boolean);
+      let bestMatch = null;
+      let bestScore = 0;
 
-Return ONLY raw JSON with the index matching the room list above:
-{"locations":[{"idx":0,"page":1,"bbox":[x_pct,y_pct,w_pct,h_pct]}]}`}
-      ]);
+      candidates.forEach(candidate => {
+        const candidateClean = candidate.toLowerCase().trim();
+        // Try matching individual words first
+        words.forEach(w => {
+          const wClean = w.text.toLowerCase().trim();
+          // Exact match
+          if (wClean === candidateClean && w.vertices.length >= 2) {
+            const score = 100;
+            if (score > bestScore) { bestScore = score; bestMatch = w; }
+          }
+          // Partial match — candidate contains this word
+          if (candidateClean.includes(wClean) && wClean.length > 2 && w.vertices.length >= 2) {
+            const score = (wClean.length / candidateClean.length) * 80;
+            if (score > bestScore) { bestScore = score; bestMatch = w; }
+          }
+          // Word contains candidate
+          if (wClean.includes(candidateClean) && candidateClean.length > 2 && w.vertices.length >= 2) {
+            const score = (candidateClean.length / wClean.length) * 70;
+            if (score > bestScore) { bestScore = score; bestMatch = w; }
+          }
+        });
 
-      let parsed;
-      try{ parsed=JSON.parse(resp.replace(/```json|```/g,'').trim()); }
-      catch{ console.warn('Could not parse location response for',s.name); return; }
-
-      const locs=parsed.locations||[];
-      locs.forEach(loc=>{
-        if(s.rooms[loc.idx]){
-          s.rooms[loc.idx].bbox=loc.bbox||[0,0,0,0];
-          s.rooms[loc.idx].page=loc.page||s.rooms[loc.idx].page||1;
-        }
+        // Also try fuzzy: split candidate into tokens and find best word match
+        const tokens = candidateClean.split(/\s+/).filter(t => t.length > 1);
+        tokens.forEach(token => {
+          words.forEach(w => {
+            const wClean = w.text.toLowerCase().trim();
+            if (wClean === token && w.vertices.length >= 2) {
+              const score = (token.length / candidateClean.length) * 60;
+              if (score > bestScore) { bestScore = score; bestMatch = w; }
+            }
+          });
+        });
       });
 
-      // Update locate indicators in table
-      updateLocateIndicators(s,i);
-      setFileStatus(i,'done',`${s.rooms.length} rooms located`);
-      updateTabDot(i,'done');
-      if(prog){ prog.textContent='· Located ✓'; prog.style.color='var(--green)'; }
-    }catch(err){
-      console.warn('Pass 2 error for',s.name,err.message);
-      setFileStatus(i,'done',`${s.rooms.length} rooms (no coordinates)`);
-      updateTabDot(i,'done');
-      if(prog){ prog.textContent='· Location failed'; prog.style.color='var(--danger)'; }
-    }
+      if (bestMatch && bestMatch.vertices.length >= 2) {
+        room.bbox = verticesToBbox(bestMatch.vertices, s);
+        room.matchScore = bestScore;
+      }
+    });
   }
 
-  // ── Claude API call ────────────────────────────────────────────────────────
-  async function callClaude(contentArr){
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:4000,messages:[{role:'user',content:contentArr}]})
-    });
-    if(!resp.ok){ const e=await resp.json().catch(()=>({})); throw new Error(e?.error?.message||`API error ${resp.status}`); }
-    const data=await resp.json();
-    return data.content.map(b=>b.text||'').join('');
+  // Convert Vision pixel vertices to % of image dimensions
+  function verticesToBbox(vertices, s) {
+    const xs = vertices.map(v => v.x || 0);
+    const ys = vertices.map(v => v.y || 0);
+    const minX = Math.min(...xs), maxX = Math.max(...xs);
+    const minY = Math.min(...ys), maxY = Math.max(...ys);
+
+    // Get the rendered image/canvas dimensions for this file
+    const wrap = document.getElementById(`wrap-${fileStates.indexOf(s)}`);
+    if (!wrap) return null;
+
+    // Google Vision returns coords relative to original image pixels.
+    // We need to know the original image size to convert to %.
+    // We stored natural dimensions when loading.
+    const natW = s.naturalWidth || wrap.clientWidth;
+    const natH = s.naturalHeight || wrap.clientHeight;
+
+    // Add padding around the text box so the highlight is visible
+    const pad = Math.max(4, (maxX - minX) * 0.15);
+    return {
+      x: Math.max(0, (minX - pad) / natW * 100),
+      y: Math.max(0, (minY - pad) / natH * 100),
+      w: Math.min(100, (maxX - minX + pad*2) / natW * 100),
+      h: Math.min(100, (maxY - minY + pad*2) / natH * 100)
+    };
   }
 
   // ── Tabs ───────────────────────────────────────────────────────────────────
-  function buildTabs(){
-    tabsHeader.innerHTML=''; tabPanels_el.innerHTML='';
-    fileStates.forEach((s,i)=>{
-      const btn=document.createElement('button');
-      btn.className='tab-btn'+(i===0?' active':''); btn.id=`tab-btn-${i}`;
-      btn.innerHTML=`<span class="tab-status-dot processing" id="tab-dot-${i}"></span>${shortName(s.name)}<span class="tab-badge" id="tab-badge-${i}">…</span>`;
-      btn.addEventListener('click',()=>switchTab(i));
+  function buildTabs() {
+    tabsHeader.innerHTML=''; tabPanelsEl.innerHTML='';
+    fileStates.forEach((s, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'tab-btn'+(i===0?' active':''); btn.id=`tab-btn-${i}`;
+      btn.innerHTML = `<span class="tab-status-dot processing" id="tab-dot-${i}"></span>${shortName(s.name)}<span class="tab-badge" id="tab-badge-${i}">…</span>`;
+      btn.addEventListener('click', () => switchTab(i));
       tabsHeader.appendChild(btn);
 
-      const panel=document.createElement('div');
-      panel.className='tab-panel'+(i===0?' active':''); panel.id=`tab-panel-${i}`;
-      panel.innerHTML=`
+      const panel = document.createElement('div');
+      panel.className = 'tab-panel'+(i===0?' active':''); panel.id=`tab-panel-${i}`;
+      panel.innerHTML = `
         <div class="viewer-panel" id="viewer-${i}">
-          <div class="panel-label">
-            ${esc(s.name)}
-            <span class="panel-hint">· hover row to highlight</span>
-            <span class="locate-progress" id="locate-prog-${i}">· locating rooms…</span>
-          </div>
+          <div class="panel-label">${esc(s.name)}<span class="panel-hint">· hover row to highlight</span></div>
           <div class="pdf-canvas-wrap" id="wrap-${i}">
             <canvas class="pdf-c" id="pdfC-${i}" style="display:${s.type==='pdf'?'block':'none'}"></canvas>
             <canvas class="hl-c" id="hlC-${i}"></canvas>
@@ -481,106 +586,112 @@ Return ONLY raw JSON with the index matching the room list above:
           </div>
         </div>
       `;
-      tabPanels_el.appendChild(panel);
+      tabPanelsEl.appendChild(panel);
 
-      $(`prev-${i}`).addEventListener('click',async()=>{ const st=fileStates[i]; if(st.currentPage<=1) return; st.currentPage--; await renderPdfPage(st,i); updatePageCtrl(i); clearHighlight(i); });
-      $(`next-${i}`).addEventListener('click',async()=>{ const st=fileStates[i]; if(st.currentPage>=st.totalPages) return; st.currentPage++; await renderPdfPage(st,i); updatePageCtrl(i); clearHighlight(i); });
-      $(`export-${i}`).addEventListener('click',()=>exportCSV(i));
+      $(`prev-${i}`).addEventListener('click', async () => { const st=fileStates[i]; if(st.currentPage<=1) return; st.currentPage--; await renderPdfPage(st,i); updatePageCtrl(i); clearHighlight(i); });
+      $(`next-${i}`).addEventListener('click', async () => { const st=fileStates[i]; if(st.currentPage>=st.totalPages) return; st.currentPage++; await renderPdfPage(st,i); updatePageCtrl(i); clearHighlight(i); });
+      $(`export-${i}`).addEventListener('click', () => exportCSV(i));
     });
   }
 
-  function skeletonRows(){ return Array.from({length:5},(_,i)=>`<tr class="skeleton-row"><td><div class="skel" style="width:20px"></div></td><td><div class="skel" style="width:${40+i*8}px"></div></td><td><div class="skel" style="width:${80+i*12}px"></div></td><td><div class="skel" style="width:50px"></div></td><td></td></tr>`).join(''); }
+  function skeletonRows(){ return Array.from({length:5},(_,j)=>`<tr class="skeleton-row"><td><div class="skel" style="width:20px"></div></td><td><div class="skel" style="width:${40+j*8}px"></div></td><td><div class="skel" style="width:${80+j*12}px"></div></td><td><div class="skel" style="width:50px"></div></td><td></td></tr>`).join(''); }
   function switchTab(i){ document.querySelectorAll('.tab-btn').forEach((b,j)=>b.classList.toggle('active',j===i)); document.querySelectorAll('.tab-panel').forEach((p,j)=>p.classList.toggle('active',j===i)); }
-  function shortName(name){ const n=name.replace(/\.(pdf|png|jpe?g)$/i,''); return esc(n.length>22?n.slice(0,20)+'…':n); }
+  function shortName(n){ n=n.replace(/\.(pdf|png|jpe?g)$/i,''); return esc(n.length>22?n.slice(0,20)+'…':n); }
   function updateTabDot(i,s){ const d=$(`tab-dot-${i}`); if(d) d.className=`tab-status-dot ${s}`; }
   function updateTabBadge(i,c){ const b=$(`tab-badge-${i}`); if(b) b.textContent=c; }
   function setFileStatus(i,state,label){ const el=$(`fi-${i}`),sl=$(`fis-${i}`); if(el) el.className=`file-item ${state}`; if(sl) sl.textContent=label; }
 
-  // ── PDF/image rendering ────────────────────────────────────────────────────
-  async function renderPdfPage(s,i){
-    const page=await s.pdfDoc.getPage(s.currentPage);
-    const wrap=$(`wrap-${i}`); const wrapW=wrap.clientWidth||580;
-    const vp0=page.getViewport({scale:1}); const vp=page.getViewport({scale:wrapW/vp0.width});
-    const pc=$(`pdfC-${i}`),hc=$(`hlC-${i}`);
+  // ── Rendering ──────────────────────────────────────────────────────────────
+  async function renderPdfPage(s, i) {
+    const page = await s.pdfDoc.getPage(s.currentPage);
+    const wrap = $(`wrap-${i}`); const wrapW = wrap.clientWidth||580;
+    const vp0 = page.getViewport({scale:1}); const vp = page.getViewport({scale:wrapW/vp0.width});
+    const pc=$(`pdfC-${i}`), hc=$(`hlC-${i}`);
     pc.width=hc.width=vp.width; pc.height=hc.height=vp.height;
+    // Store natural size for coordinate conversion
+    s.naturalWidth = vp0.width; s.naturalHeight = vp0.height;
     await page.render({canvasContext:pc.getContext('2d'),viewport:vp}).promise;
     clearHighlight(i);
   }
 
-  function renderImageViewer(s,i){
-    const wrap=$(`wrap-${i}`),pc=$(`pdfC-${i}`),hc=$(`hlC-${i}`);
-    const img=new Image(); img.className='png-viewer-img'; img.id=`img-${i}`;
-    img.onload=()=>{ const wrapW=wrap.clientWidth||580; const scale=wrapW/img.naturalWidth; hc.width=wrapW; hc.height=img.naturalHeight*scale; clearHighlight(i); };
-    const reader=new FileReader(); reader.onload=e=>{ img.src=e.target.result; s.imgSrc=e.target.result; }; reader.readAsDataURL(s.file);
-    pc.style.display='none'; wrap.insertBefore(img,pc);
+  function renderImageViewer(s, i) {
+    const wrap=$(`wrap-${i}`), pc=$(`pdfC-${i}`), hc=$(`hlC-${i}`);
+    const img = new Image(); img.className='viewer-img'; img.id=`img-${i}`;
+    img.onload = () => {
+      s.naturalWidth = img.naturalWidth; s.naturalHeight = img.naturalHeight;
+      const wrapW = wrap.clientWidth||580;
+      hc.width = wrapW; hc.height = img.naturalHeight*(wrapW/img.naturalWidth);
+      clearHighlight(i);
+    };
+    const reader = new FileReader(); reader.onload = e => img.src = e.target.result; reader.readAsDataURL(s.file);
+    pc.style.display='none'; wrap.insertBefore(img, pc);
   }
 
   function updatePageCtrl(i){ const s=fileStates[i]; $(`pginfo-${i}`).textContent=`Page ${s.currentPage} of ${s.totalPages}`; $(`prev-${i}`).disabled=s.currentPage<=1; $(`next-${i}`).disabled=s.currentPage>=s.totalPages; }
   function clearHighlight(i){ const hc=$(`hlC-${i}`); if(hc) hc.getContext('2d').clearRect(0,0,hc.width,hc.height); }
 
-  function drawHighlight(room,i){
-    const bb=room.bbox; if(!bb||(bb[2]===0&&bb[3]===0)) return;
+  function drawHighlight(room, i) {
+    const bb = room.bbox; if(!bb) return;
     const hc=$(`hlC-${i}`); if(!hc) return;
-    const ctx=hc.getContext('2d');
+    const ctx = hc.getContext('2d');
     ctx.clearRect(0,0,hc.width,hc.height);
-    const x=bb[0]/100*hc.width,y=bb[1]/100*hc.height,w=bb[2]/100*hc.width,h=bb[3]/100*hc.height;
-    ctx.fillStyle='rgba(59,130,246,.2)'; ctx.fillRect(x,y,w,h);
-    ctx.shadowColor='rgba(59,130,246,.7)'; ctx.shadowBlur=14;
-    ctx.strokeStyle='rgba(59,130,246,.95)'; ctx.lineWidth=2.5; ctx.strokeRect(x,y,w,h);
+
+    const x=bb.x/100*hc.width, y=bb.y/100*hc.height;
+    const w=bb.w/100*hc.width, h=bb.h/100*hc.height;
+
+    // Glow + fill
+    ctx.shadowColor='rgba(59,130,246,.8)'; ctx.shadowBlur=12;
+    ctx.fillStyle='rgba(59,130,246,.25)'; ctx.fillRect(x,y,w,h);
+    ctx.strokeStyle='rgba(59,130,246,1)'; ctx.lineWidth=2.5; ctx.strokeRect(x,y,w,h);
     ctx.shadowBlur=0;
-    const cs=Math.min(12,w*.18,h*.18);
+
+    // Corner ticks
+    const cs=Math.min(10,w*.3,h*.3);
     ctx.strokeStyle='#fff'; ctx.lineWidth=2;
     [[x,y,1,1],[x+w,y,-1,1],[x,y+h,1,-1],[x+w,y+h,-1,-1]].forEach(([cx,cy,dx,dy])=>{ ctx.beginPath(); ctx.moveTo(cx+dx*cs,cy); ctx.lineTo(cx,cy); ctx.lineTo(cx,cy+dy*cs); ctx.stroke(); });
+
+    // Label badge
     const label=[room.room_number,room.room_name].filter(Boolean).join(' · ');
     if(label){
-      const fs=Math.max(10,Math.min(13,w*.06)); ctx.font=`500 ${fs}px 'DM Mono',monospace`;
-      const tw=ctx.measureText(label).width,pad=8;
+      const fs=12; ctx.font=`500 ${fs}px 'DM Mono',monospace`;
+      const tw=ctx.measureText(label).width, pad=7;
       const bx=Math.max(2,Math.min(x,hc.width-tw-pad*2-2));
-      const by=y>fs+10?y-fs-6:y+h+4;
-      ctx.fillStyle='rgba(22,26,35,.9)'; ctx.beginPath(); ctx.roundRect(bx,by,tw+pad*2,fs+8,3); ctx.fill();
-      ctx.strokeStyle='rgba(59,130,246,.6)'; ctx.lineWidth=1; ctx.stroke();
+      const by=y>fs+8?y-fs-4:y+h+4;
+      ctx.fillStyle='rgba(22,26,35,.92)'; ctx.beginPath(); ctx.roundRect(bx,by,tw+pad*2,fs+8,3); ctx.fill();
+      ctx.strokeStyle='rgba(59,130,246,.7)'; ctx.lineWidth=1; ctx.stroke();
       ctx.fillStyle='#93c5fd'; ctx.fillText(label,bx+pad,by+fs+2);
     }
   }
 
   // ── Table ──────────────────────────────────────────────────────────────────
-  function populateTable(s,i){
-    const tbody=$(`tbody-${i}`),badge=$(`badge-${i}`);
+  function populateTable(s, i) {
+    const tbody=$(`tbody-${i}`), badge=$(`badge-${i}`);
     if(!tbody) return;
     tbody.innerHTML=''; badge.textContent=s.rooms.length;
     if(!s.rooms.length){ tbody.innerHTML=`<tr><td colspan="5" style="padding:16px;text-align:center;color:var(--muted)">No rooms detected</td></tr>`; return; }
     s.rooms.forEach((room,ri)=>{
       const tr=document.createElement('tr'); tr.id=`row-${i}-${ri}`;
-      const hasBbox=room.bbox&&(room.bbox[2]!==0||room.bbox[3]!==0);
+      const hasBbox=!!room.bbox;
       tr.innerHTML=`
         <td class="row-idx">${String(ri+1).padStart(2,'0')}</td>
         <td class="td-num">${esc(room.room_number)||'<span style="color:#3a4056">—</span>'}</td>
         <td class="td-name">${esc(room.room_name)}</td>
         <td class="td-floor">${esc(room.floor)||'<span style="color:#3a4056">—</span>'}</td>
-        <td class="td-locate" id="loc-ind-${i}-${ri}">${hasBbox?'📍':'⏳'}</td>
+        <td class="td-locate">${hasBbox?'📍':'—'}</td>
       `;
-      tr.addEventListener('mouseenter',async e=>{
+      tr.addEventListener('mouseenter', async e => {
         if(s.type==='pdf'){ const rp=room.page||1; if(s.pdfDoc&&rp!==s.currentPage){ s.currentPage=rp; await renderPdfPage(s,i); updatePageCtrl(i); } }
         if(s.type==='image'){ const img=$(`img-${i}`),hc=$(`hlC-${i}`); if(img&&hc){ hc.width=img.offsetWidth; hc.height=img.offsetHeight; } }
         document.querySelectorAll(`#tab-panel-${i} tbody tr`).forEach(r=>r.classList.remove('active'));
         tr.classList.add('active');
-        const hasBb=room.bbox&&(room.bbox[2]!==0||room.bbox[3]!==0);
-        hasBb?drawHighlight(room,i):clearHighlight(i);
+        room.bbox ? drawHighlight(room,i) : clearHighlight(i);
         const label=[room.room_number,room.room_name].filter(Boolean).join(' — ');
-        tooltip.textContent=hasBb?`📍 ${label}`:`⏳ ${label} (still locating…)`;
+        tooltip.textContent=room.bbox?`📍 ${label}`:`— ${label} (not found by Vision)`;
         tooltip.style.display='block'; posTooltip(e);
       });
-      tr.addEventListener('mousemove',posTooltip);
-      tr.addEventListener('mouseleave',()=>{ tr.classList.remove('active'); clearHighlight(i); tooltip.style.display='none'; });
+      tr.addEventListener('mousemove', posTooltip);
+      tr.addEventListener('mouseleave', () => { tr.classList.remove('active'); clearHighlight(i); tooltip.style.display='none'; });
       tbody.appendChild(tr);
-    });
-    if(s.type==='pdf'&&s.totalPages>1){ $(`pgctrl-${i}`).style.display='flex'; updatePageCtrl(i); }
-  }
-
-  function updateLocateIndicators(s,i){
-    s.rooms.forEach((room,ri)=>{
-      const ind=$(`loc-ind-${i}-${ri}`);
-      if(ind){ const hasBbox=room.bbox&&(room.bbox[2]!==0||room.bbox[3]!==0); ind.textContent=hasBbox?'📍':'—'; }
     });
   }
 
@@ -597,7 +708,7 @@ Return ONLY raw JSON with the index matching the room list above:
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────
-  function setStatus(msg,done=false){ statusText_el.textContent=msg; statusBar.classList.add('visible'); if(done){statusDot.style.animation='none';statusDot.style.background='#22c55e';}else{statusDot.style.animation='';statusDot.style.background='';} }
+  function setStatus(msg,done=false){ statusTextEl.textContent=msg; statusBar.classList.add('visible'); if(done){statusDot.style.animation='none';statusDot.style.background='#22c55e';}else{statusDot.style.animation='';statusDot.style.background='';} }
   function posTooltip(e){ tooltip.style.left=(e.clientX+14)+'px'; tooltip.style.top=(e.clientY-10)+'px'; }
   function toBase64(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result.split(',')[1]); r.onerror=rej; r.readAsDataURL(file); }); }
   function toArrayBuffer(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsArrayBuffer(file); }); }
