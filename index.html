@@ -539,7 +539,7 @@ Return JSON only, no markdown:
     const natH = s.naturalHeight || wrap.clientHeight;
 
     // Add padding around the text box so the highlight is visible
-    const pad = Math.max(4, (maxX - minX) * 0.15);
+    const pad = Math.max(12, (maxX - minX) * 0.5);
     return {
       x: Math.max(0, (minX - pad) / natW * 100),
       y: Math.max(0, (minY - pad) / natH * 100),
@@ -650,17 +650,7 @@ Return JSON only, no markdown:
     ctx.strokeStyle='#fff'; ctx.lineWidth=2;
     [[x,y,1,1],[x+w,y,-1,1],[x,y+h,1,-1],[x+w,y+h,-1,-1]].forEach(([cx,cy,dx,dy])=>{ ctx.beginPath(); ctx.moveTo(cx+dx*cs,cy); ctx.lineTo(cx,cy); ctx.lineTo(cx,cy+dy*cs); ctx.stroke(); });
 
-    // Label badge
-    const label=[room.room_number,room.room_name].filter(Boolean).join(' · ');
-    if(label){
-      const fs=12; ctx.font=`500 ${fs}px 'DM Mono',monospace`;
-      const tw=ctx.measureText(label).width, pad=7;
-      const bx=Math.max(2,Math.min(x,hc.width-tw-pad*2-2));
-      const by=y>fs+8?y-fs-4:y+h+4;
-      ctx.fillStyle='rgba(22,26,35,.92)'; ctx.beginPath(); ctx.roundRect(bx,by,tw+pad*2,fs+8,3); ctx.fill();
-      ctx.strokeStyle='rgba(59,130,246,.7)'; ctx.lineWidth=1; ctx.stroke();
-      ctx.fillStyle='#93c5fd'; ctx.fillText(label,bx+pad,by+fs+2);
-    }
+
   }
 
   // ── Table ──────────────────────────────────────────────────────────────────
