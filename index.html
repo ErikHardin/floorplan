@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Floor Plan Room Extractor</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap" rel="stylesheet"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#0d0f14;--surface:#161a23;--border:#252a38;
+      --accent:#3b82f6;--accent-dim:rgba(59,130,246,.15);--accent-glow:rgba(59,130,246,.35);
+      --green:#22c55e;--green-dim:rgba(34,197,94,.12);
+      --text:#e8eaf0;--muted:#6b7280;--danger:#ef4444;
+    }
+    body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;padding:36px 20px 80px}
+    body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(59,130,246,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(59,130,246,.04) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+    .container{max-width:1180px;margin:0 auto;position:relative;z-index:1}
+
+    /* ── API Key button (top right) ── */
+    .api-key-btn {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 500;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      transition: border-color .2s, box-shadow .2s;
+      opacity: 0.45;
+    }
+    .api-key-btn:hover { opacity: 1; border-color: var(--accent); box-shadow: 0 0 10px var(--accent-glow); }
+    .api-key-btn.key-set { opacity: 1; border-color: var(--green); box-shadow: 0 0 8px rgba(34,197,94,.3); }
+
+    /* ── API Key modal ── */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.65);
+      z-index: 600;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-backdrop.visible { display: flex; }
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 28px;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.6);
+      position: relative;
+    }
+    .modal-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+    .modal-sub {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 18px;
+      line-height: 1.6;
+    }
+    .modal-sub a { color: var(--accent); text-decoration: none; }
+    .modal-sub a:hover { text-decoration: underline; }
+    .key-input-wrap { position: relative; margin-bottom: 14px; }
+    .key-input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 40px 10px 12px;
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      color: var(--text);
+      outline: none;
+      transition: border-color .2s;
+    }
+    .key-input:focus { border-color: var(--accent); }
+    .key-input::placeholder { color: #3a4056; }
+    .key-toggle {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 14px;
+      padding: 0;
+      line-height: 1;
+    }
+    .key-toggle:hover { color: var(--text); }
+    .modal-actions { display: flex; gap: 8px; }
+    .btn-save-key {
+      flex: 1;
+      padding: 10px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-family: 'Syne', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .2s;
+    }
+    .btn-save-key:hover { background: #2563eb; }
+    .btn-cancel-key {
+      padding: 10px 16px;
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 6px;
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      cursor: pointer;
+      transition: border-color .15s, color .15s;
+    }
+    .btn-cancel-key:hover { border-color: var(--danger); color: var(--danger); }
+    .key-status-msg {
+      font-size: 11px;
+      margin-top: 10px;
+      min-height: 16px;
+    }
+    .key-status-msg.ok { color: var(--green); }
+    .key-status-msg.err { color: var(--danger); }
+
+    /* ── Header ── */
+    header{margin-bottom:36px}
+    .tag{display:inline-block;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);border:1px solid var(--accent);border-radius:2px;padding:3px 8px;margin-bottom:12px}
+    h1{font-family:'Syne',sans-serif;font-size:clamp(24px,4vw,40px);font-weight:800;line-height:1.1;letter-spacing:-.02em;color:#fff}
+    h1 span{color:var(--accent)}
+    .subtitle{margin-top:8px;font-size:12px;color:var(--muted);line-height:1.6}
+
+    /* ── Upload ── */
+    .upload-zone{border:2px dashed var(--border);border-radius:8px;padding:36px 32px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;background:var(--surface);position:relative;margin-bottom:16px}
+    .upload-zone:hover,.upload-zone.dragover{border-color:var(--accent);background:var(--accent-dim)}
+    .upload-zone input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+    .upload-icon{font-size:30px;margin-bottom:8px;display:block}
+    .upload-label{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#fff;margin-bottom:4px}
+    .upload-sub{font-size:11px;color:var(--muted)}
+
+    /* ── File queue ── */
+    .file-queue{display:none;flex-direction:column;gap:6px;margin-bottom:16px}
+    .file-queue.visible{display:flex}
+    .file-item{display:flex;align-items:center;gap:10px;background:var(--green-dim);border:1px solid rgba(34,197,94,.3);border-radius:6px;padding:8px 14px;font-size:12px}
+    .file-item.error{background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.3)}
+    .file-item.processing{background:var(--accent-dim);border-color:rgba(59,130,246,.3)}
+    .file-item.done{background:var(--green-dim);border-color:rgba(34,197,94,.3)}
+    .fi-icon{font-size:16px;flex-shrink:0}
+    .fi-name{flex:1;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .fi-status{font-size:11px;color:var(--muted);flex-shrink:0}
+    .fi-remove{background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;line-height:1;padding:0;transition:color .15s;flex-shrink:0}
+    .fi-remove:hover{color:var(--danger)}
+
+    /* ── Buttons ── */
+    .btn-row{display:flex;gap:10px;margin-bottom:28px}
+    .btn-extract{flex:1;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;letter-spacing:.04em;cursor:pointer;transition:background .2s,box-shadow .2s,opacity .2s;display:flex;align-items:center;justify-content:center;gap:10px}
+    .btn-extract:hover:not(:disabled){background:#2563eb;box-shadow:0 0 24px var(--accent-glow)}
+    .btn-extract:disabled{opacity:.45;cursor:not-allowed}
+    .btn-clear{padding:14px 18px;background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;font-family:'DM Mono',monospace;font-size:12px;cursor:pointer;transition:border-color .15s,color .15s}
+    .btn-clear:hover{border-color:var(--danger);color:var(--danger)}
+    .spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .75s linear infinite;display:none}
+    .btn-extract.loading .spinner{display:block}
+    .btn-extract.loading .btn-text{opacity:.7}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* ── Status / error ── */
+    .status-bar{display:none;align-items:center;gap:10px;font-size:12px;color:var(--muted);margin-bottom:20px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:6px}
+    .status-bar.visible{display:flex}
+    .status-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulse 1.2s ease-in-out infinite;flex-shrink:0}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+    .error-box{display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:6px;padding:12px 16px;font-size:12px;color:#fca5a5;margin-bottom:20px}
+    .error-box.visible{display:block}
+
+    /* ── Results ── */
+    .results-area{display:none}
+    .results-area.visible{display:block}
+    .tabs-header{display:flex;gap:2px;border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none}
+    .tabs-header::-webkit-scrollbar{display:none}
+    .tab-btn{flex-shrink:0;padding:10px 18px;background:none;border:none;border-bottom:2px solid transparent;font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);cursor:pointer;transition:color .15s,border-color .15s;white-space:nowrap;display:flex;align-items:center;gap:8px;margin-bottom:-1px}
+    .tab-btn:hover{color:var(--text)}
+    .tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+    .tab-badge{display:inline-block;background:var(--accent-dim);color:var(--accent);border:1px solid rgba(59,130,246,.3);border-radius:2px;font-size:10px;padding:1px 5px}
+    .tab-btn.active .tab-badge{background:var(--accent);color:#fff;border-color:var(--accent)}
+    .tab-status-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+    .tab-status-dot.processing{background:var(--accent);animation:pulse 1.2s ease-in-out infinite}
+    .tab-status-dot.done{background:var(--green)}
+    .tab-status-dot.error{background:var(--danger)}
+    .tab-panel{display:none}
+    .tab-panel.active{display:flex;gap:20px;align-items:flex-start;padding-top:20px}
+
+    /* ── Viewer ── */
+    .viewer-panel{flex:1 1 56%;min-width:0;position:sticky;top:20px}
+    .panel-label{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+    .panel-hint{font-family:'DM Mono',monospace;font-size:10px;color:#3a4056;font-weight:400;text-transform:none;letter-spacing:0}
+    .pdf-canvas-wrap{position:relative;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#1a1d27;line-height:0}
+    .pdf-canvas-wrap canvas.pdf-c{display:block;width:100%;height:auto}
+    .pdf-canvas-wrap canvas.hl-c{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
+    .page-controls{display:none;align-items:center;gap:10px;margin-top:8px;font-size:12px;color:var(--muted)}
+    .btn-page{background:var(--surface);border:1px solid var(--border);color:var(--muted);font-family:'DM Mono',monospace;font-size:12px;padding:4px 10px;border-radius:4px;cursor:pointer;transition:border-color .15s,color .15s}
+    .btn-page:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+    .btn-page:disabled{opacity:.35;cursor:not-allowed}
+    .page-info{flex:1;text-align:center}
+
+    /* ── Table ── */
+    .table-panel{flex:0 0 41%;min-width:260px}
+    .tbl-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+    .tbl-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:#fff}
+    .badge{display:inline-block;background:var(--accent-dim);color:var(--accent);border:1px solid rgba(59,130,246,.3);border-radius:3px;font-size:11px;padding:2px 7px;margin-left:6px}
+    .btn-export{background:none;border:1px solid var(--border);color:var(--muted);font-family:'DM Mono',monospace;font-size:11px;padding:5px 10px;border-radius:4px;cursor:pointer;transition:border-color .15s,color .15s}
+    .btn-export:hover{border-color:var(--accent);color:var(--accent)}
+    .table-wrap{border:1px solid var(--border);border-radius:8px;overflow:hidden;max-height:68vh;overflow-y:auto}
+    table{width:100%;border-collapse:collapse;font-size:12px}
+    thead{background:#1e2433;position:sticky;top:0;z-index:2}
+    thead th{padding:9px 12px;text-align:left;font-family:'Syne',sans-serif;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border)}
+    tbody tr{border-bottom:1px solid var(--border);transition:background .1s;cursor:pointer}
+    tbody tr:last-child{border-bottom:none}
+    tbody tr:hover,tbody tr.active{background:rgba(59,130,246,.1)}
+    tbody td{padding:9px 12px;vertical-align:middle}
+    .td-num{color:var(--accent);font-weight:500;white-space:nowrap}
+    .td-name{color:var(--text)}
+    .td-floor{color:var(--muted);font-size:11px}
+    .row-idx{color:#3a4056;font-size:10px;user-select:none;width:26px}
+    .skeleton-row td{padding:9px 12px}
+    .skel{height:12px;border-radius:3px;background:linear-gradient(90deg,#1e2433 25%,#252a38 50%,#1e2433 75%);background-size:200% 100%;animation:shimmer 1.4s infinite}
+    @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+    #tooltip{position:fixed;background:#1e2433;border:1px solid var(--accent);border-radius:5px;padding:6px 11px;font-size:11px;color:var(--text);pointer-events:none;z-index:1000;display:none;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.4)}
+    footer{margin-top:60px;text-align:center;font-size:11px;color:#2e3348}
+  </style>
+</head>
+<body>
+
+<!-- Hidden API key button -->
+<button class="api-key-btn" id="apiKeyBtn" title="API Key">🔑</button>
+
+<!-- API Key modal -->
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal">
+    <div class="modal-title">Anthropic API Key</div>
+    <div class="modal-sub">
+      Your key is stored in memory only and never saved or transmitted anywhere except directly to Anthropic.<br/>
+      Get a key at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>
+    </div>
+    <div class="key-input-wrap">
+      <input class="key-input" type="password" id="keyInput" placeholder="sk-ant-api03-…" autocomplete="off" spellcheck="false"/>
+      <button class="key-toggle" id="keyToggle" title="Show/hide">👁</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-save-key" id="saveKeyBtn">Save Key</button>
+      <button class="btn-cancel-key" id="cancelKeyBtn">Cancel</button>
+    </div>
+    <div class="key-status-msg" id="keyStatusMsg"></div>
+  </div>
+</div>
+
+<div class="container">
+  <header>
+    <div class="tag">ECH Technical Solutions</div>
+    <h1>Floor Plan<br/><span>Room Extractor</span></h1>
+    <p class="subtitle">Upload up to 10 floor plan PDFs — all processed simultaneously. Hover a row to highlight the room on the plan.</p>
+  </header>
+
+  <div class="upload-zone" id="dropZone">
+    <input type="file" id="fileInput" accept="application/pdf" multiple/>
+    <span class="upload-icon">📐</span>
+    <div class="upload-label">Drop up to 10 floor plan PDFs here</div>
+    <div class="upload-sub">or click to browse &nbsp;·&nbsp; PDF only &nbsp;·&nbsp; multiple files supported</div>
+  </div>
+
+  <div class="file-queue" id="fileQueue"></div>
+
+  <div class="btn-row">
+    <button class="btn-extract" id="extractBtn" disabled>
+      <div class="spinner"></div>
+      <span class="btn-text">🔍 Extract All Floor Plans</span>
+    </button>
+    <button class="btn-clear" id="clearBtn">✕ Clear</button>
+  </div>
+
+  <div class="status-bar" id="statusBar">
+    <div class="status-dot" id="statusDot"></div>
+    <span id="statusText">Processing…</span>
+  </div>
+  <div class="error-box" id="errorBox"></div>
+
+  <div class="results-area" id="resultsArea">
+    <div class="tabs-header" id="tabsHeader"></div>
+    <div id="tabPanels"></div>
+  </div>
+
+  <footer>Floor Plan Room Extractor &nbsp;·&nbsp; ECH Technical Solutions &nbsp;·&nbsp; Powered by Claude AI</footer>
+</div>
+
+<div id="tooltip"></div>
+
+<script>
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+  const $ = id => document.getElementById(id);
+
+  // ── API Key management ─────────────────────────────────────────────────────
+  let apiKey = '';
+
+  const apiKeyBtn     = $('apiKeyBtn');
+  const modalBackdrop = $('modalBackdrop');
+  const keyInput      = $('keyInput');
+  const keyToggle     = $('keyToggle');
+  const saveKeyBtn    = $('saveKeyBtn');
+  const cancelKeyBtn  = $('cancelKeyBtn');
+  const keyStatusMsg  = $('keyStatusMsg');
+
+  apiKeyBtn.addEventListener('click', () => {
+    keyInput.value = apiKey;
+    keyStatusMsg.textContent = '';
+    keyStatusMsg.className = 'key-status-msg';
+    modalBackdrop.classList.add('visible');
+    setTimeout(() => keyInput.focus(), 50);
+  });
+
+  cancelKeyBtn.addEventListener('click', () => modalBackdrop.classList.remove('visible'));
+
+  modalBackdrop.addEventListener('click', e => {
+    if (e.target === modalBackdrop) modalBackdrop.classList.remove('visible');
+  });
+
+  keyToggle.addEventListener('click', () => {
+    keyInput.type = keyInput.type === 'password' ? 'text' : 'password';
+  });
+
+  keyInput.addEventListener('keydown', e => { if (e.key === 'Enter') saveKey(); });
+
+  saveKeyBtn.addEventListener('click', saveKey);
+
+  function saveKey() {
+    const val = keyInput.value.trim();
+    if (!val) {
+      keyStatusMsg.textContent = 'Please enter a key.';
+      keyStatusMsg.className = 'key-status-msg err';
+      return;
+    }
+    if (!val.startsWith('sk-ant-')) {
+      keyStatusMsg.textContent = 'Key should start with sk-ant- — double check it.';
+      keyStatusMsg.className = 'key-status-msg err';
+      return;
+    }
+    apiKey = val;
+    apiKeyBtn.classList.add('key-set');
+    apiKeyBtn.title = 'API Key (set ✓)';
+    keyStatusMsg.textContent = '✓ Key saved for this session.';
+    keyStatusMsg.className = 'key-status-msg ok';
+    setTimeout(() => modalBackdrop.classList.remove('visible'), 800);
+  }
+
+  // ── File state ─────────────────────────────────────────────────────────────
+  let fileStates = [];
+
+  const dropZone    = $('dropZone');
+  const fileInput   = $('fileInput');
+  const fileQueue   = $('fileQueue');
+  const extractBtn  = $('extractBtn');
+  const clearBtn    = $('clearBtn');
+  const statusBar   = $('statusBar');
+  const statusDot   = $('statusDot');
+  const statusText  = $('statusText');
+  const errorBox    = $('errorBox');
+  const resultsArea = $('resultsArea');
+  const tabsHeader  = $('tabsHeader');
+  const tabPanels   = $('tabPanels');
+  const tooltip     = $('tooltip');
+
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault(); dropZone.classList.remove('dragover');
+    addFiles([...e.dataTransfer.files].filter(f => f.type === 'application/pdf'));
+  });
+  fileInput.addEventListener('change', () => { addFiles([...fileInput.files]); fileInput.value = ''; });
+
+  function addFiles(files) {
+    const remaining = 10 - fileStates.length;
+    files.slice(0, remaining).forEach(f => {
+      fileStates.push({ file: f, name: f.name, rooms: null, pdfDoc: null, currentPage: 1, totalPages: 1 });
+    });
+    renderQueue();
+    extractBtn.disabled = fileStates.length === 0;
+  }
+
+  function renderQueue() {
+    if (!fileStates.length) { fileQueue.classList.remove('visible'); return; }
+    fileQueue.classList.add('visible');
+    fileQueue.innerHTML = '';
+    fileStates.forEach((s, i) => {
+      const div = document.createElement('div');
+      div.className = 'file-item';
+      div.id = `fi-${i}`;
+      div.innerHTML = `
+        <span class="fi-icon">📄</span>
+        <span class="fi-name">${esc(s.name)}</span>
+        <span class="fi-status" id="fis-${i}">Ready</span>
+        <button class="fi-remove" data-idx="${i}">✕</button>
+      `;
+      fileQueue.appendChild(div);
+    });
+    fileQueue.querySelectorAll('.fi-remove').forEach(btn => {
+      btn.addEventListener('click', () => {
+        fileStates.splice(+btn.dataset.idx, 1);
+        renderQueue();
+        extractBtn.disabled = fileStates.length === 0;
+      });
+    });
+  }
+
+  clearBtn.addEventListener('click', () => {
+    fileStates = [];
+    renderQueue();
+    extractBtn.disabled = true;
+    hideResults();
+    errorBox.classList.remove('visible');
+    statusBar.classList.remove('visible');
+  });
+
+  function hideResults() {
+    resultsArea.classList.remove('visible');
+    tabsHeader.innerHTML = '';
+    tabPanels.innerHTML  = '';
+  }
+
+  // ── Extract ────────────────────────────────────────────────────────────────
+  extractBtn.addEventListener('click', async () => {
+    if (!fileStates.length) return;
+
+    // Require API key
+    if (!apiKey) {
+      errorBox.textContent = 'No API key set. Click the 🔑 button in the top-right corner to add your Anthropic API key.';
+      errorBox.classList.add('visible');
+      apiKeyBtn.style.animation = 'pulse 0.6s ease-in-out 3';
+      return;
+    }
+
+    errorBox.classList.remove('visible');
+    extractBtn.classList.add('loading');
+    extractBtn.disabled = true;
+    fileStates.forEach(s => { s.rooms = null; s.pdfDoc = null; });
+
+    hideResults();
+    buildTabs();
+    resultsArea.classList.add('visible');
+    setStatus(`Processing ${fileStates.length} floor plan${fileStates.length > 1 ? 's' : ''} simultaneously…`);
+
+    await Promise.all(fileStates.map((s, i) => processFile(s, i)));
+
+    const doneCount = fileStates.filter(s => s.rooms && s.rooms.length > 0).length;
+    const errCount  = fileStates.filter(s => s.rooms === null).length;
+    let msg = `✓ Complete — ${doneCount} file${doneCount !== 1 ? 's' : ''} processed`;
+    if (errCount) msg += `, ${errCount} failed`;
+    setStatus(msg, true);
+    extractBtn.classList.remove('loading');
+    extractBtn.disabled = false;
+  });
+
+  async function processFile(s, i) {
+    setFileStatus(i, 'processing', 'Extracting…');
+    updateTabDot(i, 'processing');
+    try {
+      const buf = await toArrayBuffer(s.file);
+      s.pdfDoc = await pdfjsLib.getDocument({ data: buf }).promise;
+      s.totalPages = s.pdfDoc.numPages;
+      s.currentPage = 1;
+      await renderPage(s, i);
+
+      const b64 = await toBase64(s.file);
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 4000,
+          messages: [{
+            role: 'user',
+            content: [
+              { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64 } },
+              { type: 'text', text: `Analyze this building or hospital floor plan PDF and extract every labeled room.
+
+For each room return:
+- room_number: room number/ID (e.g. "101", "ICU-3") — empty string if none
+- room_name: descriptive name (e.g. "Patient Room", "Nurses Station")
+- floor: floor/level if determinable — empty string if unknown
+- notes: extra label info — empty string if none
+- page: PDF page number (1-indexed integer)
+- bbox: bounding box as page percentages [x_pct, y_pct, w_pct, h_pct]
+  x_pct = left edge % of page width (0–100)
+  y_pct = top edge % of page height from TOP (0–100)
+  w_pct = room width % of page width (typical 4–35)
+  h_pct = room height % of page height (typical 3–25)
+  Use [0,0,0,0] if coordinates cannot be determined.
+
+Respond ONLY with raw JSON, no markdown, no backticks:
+{"rooms":[{"room_number":"","room_name":"","floor":"","notes":"","page":1,"bbox":[0,0,0,0]}]}` }
+            ]
+          }]
+        })
+      });
+
+      if (!resp.ok) {
+        const e = await resp.json().catch(() => ({}));
+        throw new Error(e?.error?.message || `API error ${resp.status}`);
+      }
+
+      const data = await resp.json();
+      const raw  = data.content.map(b => b.text || '').join('');
+      let parsed;
+      try { parsed = JSON.parse(raw.replace(/```json|```/g, '').trim()); }
+      catch { throw new Error('Could not parse AI response.'); }
+
+      s.rooms = parsed.rooms || [];
+      populateTable(s, i);
+      setFileStatus(i, 'done', `${s.rooms.length} rooms`);
+      updateTabDot(i, 'done');
+      updateTabBadge(i, s.rooms.length);
+    } catch (err) {
+      s.rooms = [];
+      showTableError(i, err.message);
+      setFileStatus(i, 'error', 'Error');
+      updateTabDot(i, 'error');
+    }
+  }
+
+  // ── Tabs ───────────────────────────────────────────────────────────────────
+  function buildTabs() {
+    tabsHeader.innerHTML = '';
+    tabPanels.innerHTML  = '';
+    fileStates.forEach((s, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'tab-btn' + (i === 0 ? ' active' : '');
+      btn.id = `tab-btn-${i}`;
+      btn.innerHTML = `<span class="tab-status-dot processing" id="tab-dot-${i}"></span>${shortName(s.name)}<span class="tab-badge" id="tab-badge-${i}">…</span>`;
+      btn.addEventListener('click', () => switchTab(i));
+      tabsHeader.appendChild(btn);
+
+      const panel = document.createElement('div');
+      panel.className = 'tab-panel' + (i === 0 ? ' active' : '');
+      panel.id = `tab-panel-${i}`;
+      panel.innerHTML = `
+        <div class="viewer-panel" id="viewer-${i}">
+          <div class="panel-label">${esc(s.name)}<span class="panel-hint">· hover row to highlight</span></div>
+          <div class="pdf-canvas-wrap" id="wrap-${i}">
+            <canvas class="pdf-c" id="pdfC-${i}"></canvas>
+            <canvas class="hl-c"  id="hlC-${i}"></canvas>
+          </div>
+          <div class="page-controls" id="pgctrl-${i}">
+            <button class="btn-page" id="prev-${i}">◀ Prev</button>
+            <span class="page-info" id="pginfo-${i}">Page 1 of 1</span>
+            <button class="btn-page" id="next-${i}">Next ▶</button>
+          </div>
+        </div>
+        <div class="table-panel">
+          <div class="tbl-header">
+            <div class="tbl-title">Rooms <span class="badge" id="badge-${i}">—</span></div>
+            <button class="btn-export" id="export-${i}">⬇ CSV</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr>
+                <th class="row-idx">#</th><th>Number</th><th>Room Name</th><th>Floor</th>
+              </tr></thead>
+              <tbody id="tbody-${i}">${skeletonRows()}</tbody>
+            </table>
+          </div>
+        </div>
+      `;
+      tabPanels.appendChild(panel);
+
+      $(`prev-${i}`).addEventListener('click', async () => {
+        const st = fileStates[i];
+        if (st.currentPage <= 1) return;
+        st.currentPage--;
+        await renderPage(st, i);
+        updatePageCtrl(i);
+        clearHighlight(i);
+      });
+      $(`next-${i}`).addEventListener('click', async () => {
+        const st = fileStates[i];
+        if (st.currentPage >= st.totalPages) return;
+        st.currentPage++;
+        await renderPage(st, i);
+        updatePageCtrl(i);
+        clearHighlight(i);
+      });
+      $(`export-${i}`).addEventListener('click', () => exportCSV(i));
+    });
+  }
+
+  function skeletonRows() {
+    return Array.from({length:5},(_,i)=>`<tr class="skeleton-row"><td><div class="skel" style="width:20px"></div></td><td><div class="skel" style="width:${40+i*8}px"></div></td><td><div class="skel" style="width:${80+i*12}px"></div></td><td><div class="skel" style="width:50px"></div></td></tr>`).join('');
+  }
+
+  function switchTab(i) {
+    document.querySelectorAll('.tab-btn').forEach((b,j)   => b.classList.toggle('active', j===i));
+    document.querySelectorAll('.tab-panel').forEach((p,j) => p.classList.toggle('active', j===i));
+  }
+
+  function shortName(name) {
+    const n = name.replace(/\.pdf$/i,'');
+    return esc(n.length > 22 ? n.slice(0,20)+'…' : n);
+  }
+
+  function updateTabDot(i, state) { const d=$(`tab-dot-${i}`); if(d) d.className=`tab-status-dot ${state}`; }
+  function updateTabBadge(i, count) { const b=$(`tab-badge-${i}`); if(b) b.textContent=count; }
+
+  function setFileStatus(i, state, label) {
+    const el=$(`fi-${i}`), sl=$(`fis-${i}`);
+    if(el) el.className=`file-item ${state}`;
+    if(sl) sl.textContent=label;
+  }
+
+  // ── PDF rendering ──────────────────────────────────────────────────────────
+  async function renderPage(s, i) {
+    const page = await s.pdfDoc.getPage(s.currentPage);
+    const wrap = $(`wrap-${i}`);
+    const wrapW = wrap.clientWidth || 580;
+    const vp0 = page.getViewport({scale:1});
+    const vp  = page.getViewport({scale: wrapW/vp0.width});
+    const pc = $(`pdfC-${i}`), hc = $(`hlC-${i}`);
+    pc.width = hc.width = vp.width;
+    pc.height = hc.height = vp.height;
+    await page.render({canvasContext: pc.getContext('2d'), viewport: vp}).promise;
+    clearHighlight(i);
+  }
+
+  function updatePageCtrl(i) {
+    const s = fileStates[i];
+    $(`pginfo-${i}`).textContent = `Page ${s.currentPage} of ${s.totalPages}`;
+    $(`prev-${i}`).disabled = s.currentPage <= 1;
+    $(`next-${i}`).disabled = s.currentPage >= s.totalPages;
+  }
+
+  function clearHighlight(i) { const hc=$(`hlC-${i}`); if(hc) hc.getContext('2d').clearRect(0,0,hc.width,hc.height); }
+
+  function drawHighlight(room, i) {
+    const bb = room.bbox;
+    if (!bb || (bb[2]===0 && bb[3]===0)) return;
+    const hc = $(`hlC-${i}`);
+    if (!hc) return;
+    const ctx = hc.getContext('2d');
+    ctx.clearRect(0,0,hc.width,hc.height);
+    const x=bb[0]/100*hc.width, y=bb[1]/100*hc.height, w=bb[2]/100*hc.width, h=bb[3]/100*hc.height;
+    ctx.fillStyle='rgba(59,130,246,.2)'; ctx.fillRect(x,y,w,h);
+    ctx.shadowColor='rgba(59,130,246,.7)'; ctx.shadowBlur=14;
+    ctx.strokeStyle='rgba(59,130,246,.95)'; ctx.lineWidth=2.5; ctx.strokeRect(x,y,w,h);
+    ctx.shadowBlur=0;
+    const cs=Math.min(12,w*.18,h*.18);
+    ctx.strokeStyle='#fff'; ctx.lineWidth=2;
+    [[x,y,1,1],[x+w,y,-1,1],[x,y+h,1,-1],[x+w,y+h,-1,-1]].forEach(([cx,cy,dx,dy])=>{
+      ctx.beginPath(); ctx.moveTo(cx+dx*cs,cy); ctx.lineTo(cx,cy); ctx.lineTo(cx,cy+dy*cs); ctx.stroke();
+    });
+    const label=[room.room_number,room.room_name].filter(Boolean).join(' · ');
+    if(label){
+      const fs=Math.max(10,Math.min(13,w*.06));
+      ctx.font=`500 ${fs}px 'DM Mono',monospace`;
+      const tw=ctx.measureText(label).width, pad=8;
+      const bx=Math.max(2,Math.min(x,hc.width-tw-pad*2-2));
+      const by=y>fs+10?y-fs-6:y+h+4;
+      ctx.fillStyle='rgba(22,26,35,.9)';
+      ctx.beginPath(); ctx.roundRect(bx,by,tw+pad*2,fs+8,3); ctx.fill();
+      ctx.strokeStyle='rgba(59,130,246,.6)'; ctx.lineWidth=1; ctx.stroke();
+      ctx.fillStyle='#93c5fd'; ctx.fillText(label,bx+pad,by+fs+2);
+    }
+  }
+
+  // ── Table population ───────────────────────────────────────────────────────
+  function populateTable(s, i) {
+    const tbody=$(`tbody-${i}`), badge=$(`badge-${i}`);
+    if(!tbody) return;
+    tbody.innerHTML='';
+    badge.textContent=s.rooms.length;
+    if(!s.rooms.length){
+      tbody.innerHTML=`<tr><td colspan="4" style="padding:16px;text-align:center;color:var(--muted)">No rooms detected</td></tr>`;
+      return;
+    }
+    s.rooms.forEach((room,ri)=>{
+      const tr=document.createElement('tr');
+      tr.innerHTML=`
+        <td class="row-idx">${String(ri+1).padStart(2,'0')}</td>
+        <td class="td-num">${esc(room.room_number)||'<span style="color:#3a4056">—</span>'}</td>
+        <td class="td-name">${esc(room.room_name)}</td>
+        <td class="td-floor">${esc(room.floor)||'<span style="color:#3a4056">—</span>'}</td>
+      `;
+      tr.addEventListener('mouseenter', async e=>{
+        const rp=room.page||1;
+        if(s.pdfDoc && rp!==s.currentPage){ s.currentPage=rp; await renderPage(s,i); updatePageCtrl(i); }
+        document.querySelectorAll(`#tab-panel-${i} tbody tr`).forEach(r=>r.classList.remove('active'));
+        tr.classList.add('active');
+        const hasBbox=room.bbox&&(room.bbox[2]!==0||room.bbox[3]!==0);
+        hasBbox?drawHighlight(room,i):clearHighlight(i);
+        const label=[room.room_number,room.room_name].filter(Boolean).join(' — ');
+        tooltip.textContent=hasBbox?`📍 ${label}`:`⚠ ${label} (no coordinates)`;
+        tooltip.style.display='block'; posTooltip(e);
+      });
+      tr.addEventListener('mousemove', posTooltip);
+      tr.addEventListener('mouseleave',()=>{ tr.classList.remove('active'); clearHighlight(i); tooltip.style.display='none'; });
+      tbody.appendChild(tr);
+    });
+    if(s.totalPages>1){ $(`pgctrl-${i}`).style.display='flex'; updatePageCtrl(i); }
+  }
+
+  function showTableError(i, msg) {
+    const tbody=$(`tbody-${i}`), badge=$(`badge-${i}`);
+    if(tbody) tbody.innerHTML=`<tr><td colspan="4" style="padding:16px;color:#fca5a5;font-size:11px">Error: ${esc(msg)}</td></tr>`;
+    if(badge) badge.textContent='!';
+  }
+
+  // ── Export ─────────────────────────────────────────────────────────────────
+  function exportCSV(i) {
+    const s=fileStates[i];
+    if(!s||!s.rooms||!s.rooms.length) return;
+    const hdr=['#','Room Number','Room Name','Floor/Level','Notes','Page'];
+    const rows=s.rooms.map((r,ri)=>[ri+1,r.room_number||'',r.room_name||'',r.floor||'',r.notes||'',r.page||1]);
+    const csv=[hdr,...rows].map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+    a.download=s.name.replace(/\.pdf$/i,'')+'_rooms.csv';
+    a.click();
+  }
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  function setStatus(msg,done=false){
+    statusText.textContent=msg; statusBar.classList.add('visible');
+    if(done){statusDot.style.animation='none';statusDot.style.background='#22c55e';}
+    else{statusDot.style.animation='';statusDot.style.background='';}
+  }
+  function posTooltip(e){ tooltip.style.left=(e.clientX+14)+'px'; tooltip.style.top=(e.clientY-10)+'px'; }
+  function toBase64(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result.split(',')[1]); r.onerror=rej; r.readAsDataURL(file); }); }
+  function toArrayBuffer(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsArrayBuffer(file); }); }
+  function esc(s){ return s?String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'):''; }
+</script>
+</body>
+</html>
