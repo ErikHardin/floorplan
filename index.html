@@ -520,18 +520,48 @@
 
   async function captureSnip(sourceIdx,rx,ry,rw,rh,snipCanvas){
     const s=fileStates[sourceIdx];if(!s)return;
-    const pc=$(`pdfC-${sourceIdx}`),img=$(`img-${sourceIdx}`);
+
     const displayW=snipCanvas.width,displayH=snipCanvas.height;
+
+    // Scale factors from display coords to natural image coords
     const natW=s.naturalWidth||displayW,natH=s.naturalHeight||displayH;
-    const sx=rx*(natW/displayW),sy=ry*(natH/displayH),sw=rw*(natW/displayW),sh=rh*(natH/displayH);
-    const off=document.createElement('canvas');off.width=Math.round(sw);off.height=Math.round(sh);
+    const scaleX=natW/displayW,scaleY=natH/displayH;
+
+    // Natural-pixel crop region
+    const sx=rx*scaleX,sy=ry*scaleY,sw=rw*scaleX,sh=rh*scaleY;
+
+    // Target output size — render at 3x natural for crisp OCR
+    const SCALE=3;
+    const outW=Math.round(sw*SCALE),outH=Math.round(sh*SCALE);
+    const off=document.createElement('canvas');
+    off.width=outW;off.height=outH;
     const octx=off.getContext('2d');
-    if(s.type==='pdf'&&pc)octx.drawImage(pc,sx,sy,sw,sh,0,0,off.width,off.height);
-    else if(img)octx.drawImage(img,sx,sy,sw,sh,0,0,off.width,off.height);
+    octx.imageSmoothingEnabled=true;
+    octx.imageSmoothingQuality='high';
+
+    if(s.type==='pdf'&&s.pdfDoc){
+      // Re-render the PDF page at high resolution for the snip
+      const page=await s.pdfDoc.getPage(s.currentPage);
+      const hiVp=page.getViewport({scale:SCALE*scaleX>1?SCALE*scaleX:SCALE});
+      const hiCanvas=document.createElement('canvas');
+      hiCanvas.width=hiVp.width;hiCanvas.height=hiVp.height;
+      await page.render({canvasContext:hiCanvas.getContext('2d'),viewport:hiVp}).promise;
+      // Crop from high-res render
+      const hiScaleX=hiVp.width/natW,hiScaleY=hiVp.height/natH;
+      octx.drawImage(hiCanvas,sx*hiScaleX,sy*hiScaleY,sw*hiScaleX,sh*hiScaleY,0,0,outW,outH);
+    } else {
+      // For images, draw from original b64 at high res
+      const hiImg=new Image();
+      await new Promise(res=>{hiImg.onload=res;hiImg.src='data:'+s.file.type+';base64,'+s.b64;});
+      octx.drawImage(hiImg,sx,sy,sw,sh,0,0,outW,outH);
+    }
+
+    // Flash confirmation on snip canvas
     const ctx=snipCanvas.getContext('2d');
     ctx.fillStyle='rgba(22,163,74,.2)';ctx.fillRect(rx,ry,rw,rh);
     ctx.strokeStyle='#16a34a';ctx.lineWidth=2;ctx.strokeRect(rx,ry,rw,rh);
     setTimeout(()=>ctx.clearRect(0,0,snipCanvas.width,snipCanvas.height),400);
+
     off.toBlob(blob=>{
       if(!blob)return;
       snipCount++;
