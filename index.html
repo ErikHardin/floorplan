@@ -701,6 +701,8 @@
   function renderImageViewer(s,i){
     return new Promise(res=>{
       const wrap=$(`wrap-${i}`),pc=$(`pdfC-${i}`),hc=$(`hlC-${i}`),sc=$(`snipC-${i}`);
+      // Remove any existing viewer image to avoid duplicates
+      const existing=$(`img-${i}`);if(existing)existing.remove();
       const img=new Image();img.className='viewer-img';img.id=`img-${i}`;
       img.onload=()=>{
         s.naturalWidth=img.naturalWidth;s.naturalHeight=img.naturalHeight;
