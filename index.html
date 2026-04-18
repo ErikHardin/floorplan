@@ -332,7 +332,7 @@
 
   function addFiles(files){
     const rem=10-fileStates.length;
-    files.slice(0,rem).forEach(f=>{if(!fileType(f))return;fileStates.push({file:f,name:f.name,type:fileType(f),rooms:null,b64:null,pdfDoc:null,currentPage:1,totalPages:1,visionWords:[],naturalWidth:0,naturalHeight:0,isSnip:false,snipBlob:null});});
+    files.slice(0,rem).forEach(f=>{if(!fileType(f))return;fileStates.push({file:f,name:f.name,type:fileType(f),rooms:null,b64:null,pdfDoc:null,currentPage:1,totalPages:1,visionWords:[],naturalWidth:0,naturalHeight:0,isSnip:false,snipBlob:null,snipOnly:false});});
     renderQueue();extractBtn.disabled=fileStates.length===0;
   }
 
@@ -348,10 +348,14 @@
     fileQueue.classList.add('visible');fileQueue.innerHTML='';
     fileStates.forEach((s,i)=>{
       const div=document.createElement('div');div.className='file-item';div.id=`fi-${i}`;
-      div.innerHTML=`<span class="fi-icon">${s.isSnip?'✂️':fileIcon(s.file)}</span><span class="fi-name">${esc(s.name)}</span><span class="fi-type">${s.isSnip?'SNIP':fileTypeLabel(s.file)}</span><span class="fi-status" id="fis-${i}">Ready</span><button class="fi-remove" data-idx="${i}">✕</button>`;
+      div.innerHTML=`<span class="fi-icon">${s.isSnip?'✂️':fileIcon(s.file)}</span><span class="fi-name">${esc(s.name)}</span><span class="fi-type">${s.isSnip?'SNIP':fileTypeLabel(s.file)}</span>${!s.isSnip?`<label class="fi-mode-toggle" title="Toggle between full extraction or snip-only mode"><input type="checkbox" class="fi-snip-only" data-idx="${i}" ${s.snipOnly?'checked':''}><span class="fi-mode-label">${s.snipOnly?'✂️ Snip Only':'🔍 Extract'}</span></label>`:''}<span class="fi-status" id="fis-${i}">Ready</span><button class="fi-remove" data-idx="${i}">✕</button>`;
       fileQueue.appendChild(div);
     });
     fileQueue.querySelectorAll('.fi-remove').forEach(btn=>{btn.addEventListener('click',()=>{fileStates.splice(+btn.dataset.idx,1);renderQueue();extractBtn.disabled=fileStates.length===0;});});
+    fileQueue.querySelectorAll('.fi-snip-only').forEach(cb=>{cb.addEventListener('change',()=>{
+      const idx=+cb.dataset.idx;fileStates[idx].snipOnly=cb.checked;
+      const lbl=cb.nextElementSibling;if(lbl)lbl.textContent=cb.checked?'✂️ Snip Only':'🔍 Extract';
+    });});
   }
 
   clearBtn.addEventListener('click',()=>{fileStates=[];renderQueue();extractBtn.disabled=true;hideResults();errorBox.classList.remove('visible');statusBar.classList.remove('visible');exitSnipMode();});
@@ -382,12 +386,19 @@
       s.b64=await toBase64(s.file);
       if(s.type==='pdf'){const buf=await toArrayBuffer(s.file);s.pdfDoc=await pdfjsLib.getDocument({data:buf}).promise;s.totalPages=s.pdfDoc.numPages;s.currentPage=1;await renderPdfPage(s,i);}
       else{await renderImageViewer(s,i);}
+      if(s.type==='pdf'&&s.totalPages>1){$(`pgctrl-${i}`).style.display='flex';updatePageCtrl(i);}
+      if(s.snipOnly){
+        s.rooms=[];
+        updateTabBadge(i,'✂️');
+        setFileStatus(i,'done','Snip ready');updateTabDot(i,'done');
+        showSnipPrompt(i);
+        return;
+      }
       const[rooms,visionWords]=await Promise.all([runClaude(s),googleKey?runGoogleVision(s):Promise.resolve([])]);
       s.rooms=rooms.map(r=>({...r,bbox:null,included:true}));s.visionWords=visionWords;
       matchRoomsToVision(s);
       populateTable(s,i);updateTabBadge(i,s.rooms.length);
       setFileStatus(i,'done',`${s.rooms.length} rooms`);updateTabDot(i,'done');
-      if(s.type==='pdf'&&s.totalPages>1){$(`pgctrl-${i}`).style.display='flex';updatePageCtrl(i);}
     }catch(err){s.rooms=[];showTableError(i,err.message);setFileStatus(i,'error','Error');updateTabDot(i,'error');}
   }
 
@@ -715,6 +726,15 @@
     updateSelCount(i);
   }
 
+  function showSnipPrompt(i){
+    const tbody=$(`tbody-${i}`),badge=$(`badge-${i}`);
+    if(tbody)tbody.innerHTML=`<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--text3);line-height:1.8">
+      <div style="font-size:24px;margin-bottom:8px">✂️</div>
+      <div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--text2);margin-bottom:4px">Snip Only Mode</div>
+      <div style="font-size:11px">Use the <strong>✂️ Snip Section</strong> button on the floor plan viewer to select areas.<br/>Each snip will be added as its own tab and processed automatically.</div>
+    </td></tr>`;
+    const selRow=$(`sel-all-row-${i}`);if(selRow)selRow.style.display='none';
+  }
   function showTableError(i,msg){const t=$(`tbody-${i}`),b=$(`badge-${i}`);if(t)t.innerHTML=`<tr><td colspan="6" style="padding:16px;color:var(--danger);font-size:11px">Error: ${esc(msg)}</td></tr>`;if(b)b.textContent='!';}
 
   // ── Export CSV ─────────────────────────────────────────────────────────────
