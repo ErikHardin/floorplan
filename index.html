@@ -131,6 +131,10 @@
     .tab-status-dot.processing{background:var(--accent);animation:pulse 1.2s ease-in-out infinite}
     .tab-status-dot.done{background:var(--green)}
     .tab-status-dot.error{background:var(--danger)}
+    .tab-close{display:none;background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;line-height:1;padding:0 0 0 6px;transition:color .15s;flex-shrink:0}
+    .tab-close:hover{color:var(--danger)}
+    .tab-btn:hover .tab-close{display:inline}
+    .tab-btn.active .tab-close{display:inline}
     .tab-panel{display:none}
     .tab-panel.active{display:flex;gap:20px;align-items:flex-start;padding-top:18px}
 
@@ -542,8 +546,8 @@
   function addTab(s,i){
     const btn=document.createElement('button');
     btn.className='tab-btn'+(i===0?' active':'');btn.id=`tab-btn-${i}`;
-    btn.innerHTML=`<span class="tab-status-dot processing" id="tab-dot-${i}"></span>${s.isSnip?'✂️ ':''}${shortName(s.name)}<span class="tab-badge" id="tab-badge-${i}">…</span>`;
-    btn.addEventListener('click',()=>switchTab(i));
+    btn.innerHTML=`<span class="tab-status-dot processing" id="tab-dot-${i}"></span>${s.isSnip?'✂️ ':''}${shortName(s.name)}<span class="tab-badge" id="tab-badge-${i}">…</span>${s.isSnip?'<button class="tab-close" title="Close tab">✕</button>':''}`;
+    btn.addEventListener('click',(e)=>{if(e.target.classList.contains('tab-close')){e.stopPropagation();closeSnipTab(i);}else{switchTab(i);}});
     tabsHeader.appendChild(btn);
 
     const panel=document.createElement('div');
@@ -622,6 +626,30 @@
   function downloadSnip(i){const s=fileStates[i];if(!s||!s.snipBlob)return;const a=document.createElement('a');a.href=URL.createObjectURL(s.snipBlob);const nm=($(`rename-${i}`)?.value||s.name).trim().replace(/\s+/g,'_')||'snip';a.download=nm+'.png';a.click();}
 
   function skeletonRows(){return Array.from({length:5},(_,j)=>`<tr class="skeleton-row"><td></td><td></td><td><div class="skel" style="width:${40+j*8}px"></div></td><td><div class="skel" style="width:${80+j*12}px"></div></td><td><div class="skel" style="width:40px"></div></td><td></td></tr>`).join('');}
+  function closeSnipTab(idx){
+    // Remove from fileStates
+    fileStates.splice(idx,1);
+    renderQueue();
+    // Rebuild all tabs
+    const wasActive=document.querySelector(`#tab-btn-${idx}`)?.classList.contains('active');
+    hideResults();
+    if(fileStates.length===0){extractBtn.disabled=true;return;}
+    buildTabs();
+    resultsArea.classList.add('visible');
+    // Re-populate tables for existing processed files
+    fileStates.forEach((s,i)=>{
+      if(s.rooms&&s.rooms.length>0){populateTable(s,i);updateTabBadge(i,s.rooms.length);updateTabDot(i,'done');}
+      else if(s.snipOnly&&s.rooms!==null){showSnipPrompt(i);updateTabBadge(i,'✂️');updateTabDot(i,'done');}
+      else if(s.rooms!==null&&s.rooms.length===0&&!s.snipOnly){updateTabDot(i,'done');}
+      if(s.pdfDoc||s.imgSrc||s.type==='image'){
+        if(s.type==='pdf'&&s.pdfDoc)renderPdfPage(s,i).then(()=>{if(s.totalPages>1){$(`pgctrl-${i}`).style.display='flex';updatePageCtrl(i);}});
+        else if(s.type==='image'&&s.b64)renderImageViewer(s,i);
+      }
+    });
+    // Switch to adjacent tab
+    const newActive=Math.min(idx,fileStates.length-1);
+    switchTab(newActive);
+  }
   function switchTab(i){document.querySelectorAll('.tab-btn').forEach((b,j)=>b.classList.toggle('active',j===i));document.querySelectorAll('.tab-panel').forEach((p,j)=>p.classList.toggle('active',j===i));}
   function shortName(n){n=n.replace(/\.(pdf|png|jpe?g)$/i,'');return esc(n.length>22?n.slice(0,20)+'…':n);}
   function updateTabDot(i,s){const d=$(`tab-dot-${i}`);if(d)d.className=`tab-status-dot ${s}`;}
