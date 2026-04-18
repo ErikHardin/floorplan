@@ -169,6 +169,8 @@
     .table-panel{flex:0 0 43%;min-width:280px}
     .tbl-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px;flex-wrap:wrap}
     .tbl-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--text)}
+    .tab-rename{font-family:'DM Mono',monospace;font-size:11px;color:var(--text2);border:1px solid var(--border2);border-radius:4px;padding:3px 7px;background:var(--surface2);outline:none;width:180px;transition:border-color .15s,box-shadow .15s;margin-left:4px}
+    .tab-rename:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-dim)}
     .badge{display:inline-block;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-mid);border-radius:10px;font-size:11px;padding:1px 8px;margin-left:5px}
     .tbl-actions{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
     .btn-export{background:var(--surface);border:1px solid var(--border);color:var(--text2);font-family:'DM Mono',monospace;font-size:11px;padding:5px 10px;border-radius:5px;cursor:pointer;transition:all .15s;box-shadow:var(--shadow)}
@@ -214,7 +216,7 @@
 </head>
 <body>
 
-<button class="api-key-btn keys-set" id="apiKeyBtn" title="API Keys (set ✓)">🔑</button>
+<button class="api-key-btn" id="apiKeyBtn" title="API Keys">🔑</button>
 
 <div class="modal-backdrop" id="modalBackdrop">
   <div class="modal">
@@ -280,9 +282,9 @@
   pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   const $=id=>document.getElementById(id);
 
-  // ── API Keys — saved in localStorage so you only enter them once ──────────
-  let anthropicKey=localStorage.getItem('fpr_anthropic_key')||'';
-  let googleKey=localStorage.getItem('fpr_google_key')||'AIzaSyA5yF0JrLS9XHLZcgl045yqUHBIqIAGNqg';
+  // ── API Keys — entered manually each session ──────────────────────────────
+  let anthropicKey="";
+  let googleKey="AIzaSyA5yF0JrLS9XHLZcgl045yqUHBIqIAGNqg";
 
   // ── API Key modal (for updating keys if needed) ────────────────────────────
   const apiKeyBtn=$('apiKeyBtn'),modalBackdrop=$('modalBackdrop');
@@ -302,11 +304,10 @@
   saveKeyBtn.addEventListener('click',()=>{
     const ak=keyAnthropic.value.trim(),gk=keyGoogle.value.trim();
     if(!ak&&!gk){keyStatusMsg.textContent='Please enter at least one key.';keyStatusMsg.className='key-status-msg err';return;}
-    if(ak){anthropicKey=ak;localStorage.setItem('fpr_anthropic_key',ak);}
-    if(gk){googleKey=gk;localStorage.setItem('fpr_google_key',gk);}
+    anthropicKey=ak||anthropicKey;googleKey=gk||googleKey;
     updateKeyIndicator();
-    keyStatusMsg.textContent='✓ Keys saved — remembered in this browser.';keyStatusMsg.className='key-status-msg ok';
-    setTimeout(()=>modalBackdrop.classList.remove('visible'),900);
+    keyStatusMsg.textContent='✓ Keys saved.';keyStatusMsg.className='key-status-msg ok';
+    setTimeout(()=>modalBackdrop.classList.remove('visible'),700);
   });
 
   // ── File helpers ───────────────────────────────────────────────────────────
@@ -562,6 +563,7 @@
         <div class="tbl-header">
           <div class="tbl-title">Rooms <span class="badge" id="badge-${i}">—</span></div>
           <div class="tbl-actions">
+            <input class="tab-rename" id="rename-${i}" value="${esc(s.name)}" placeholder="File / tab name" title="Edit name used for tab label and CSV filename"/>
             ${s.isSnip?`<button class="btn-dl-snip visible" onclick="downloadSnip(${i})">⬇ Snip Image</button>`:''}
             <button class="btn-export" id="export-${i}">⬇ CSV</button>
           </div>
@@ -590,11 +592,23 @@
     $(`prev-${i}`)?.addEventListener('click',async()=>{const st=fileStates[i];if(st.currentPage<=1)return;st.currentPage--;await renderPdfPage(st,i);updatePageCtrl(i);clearHighlight(i);});
     $(`next-${i}`)?.addEventListener('click',async()=>{const st=fileStates[i];if(st.currentPage>=st.totalPages)return;st.currentPage++;await renderPdfPage(st,i);updatePageCtrl(i);clearHighlight(i);});
     $(`export-${i}`)?.addEventListener('click',()=>exportCSV(i));
+    $(`rename-${i}`)?.addEventListener('input',e=>{
+      fileStates[i].name=e.target.value;
+      const btn=$(`tab-btn-${i}`);
+      if(btn){
+        const dot=btn.querySelector('.tab-status-dot');
+        const badge=btn.querySelector('.tab-badge');
+        btn.textContent='';
+        btn.appendChild(dot);
+        btn.appendChild(document.createTextNode((fileStates[i].isSnip?'✂️ ':'')+shortName(e.target.value)));
+        btn.appendChild(badge);
+      }
+    });
   }
 
   function toggleSnip(idx){if(snipMode&&snipSourceIdx===idx){exitSnipMode();return;}if(snipMode)exitSnipMode();switchTab(idx);enterSnipMode(idx);}
   function processSnipsAndExit(idx){exitSnipMode();extractBtn.click();}
-  function downloadSnip(i){const s=fileStates[i];if(!s||!s.snipBlob)return;const a=document.createElement('a');a.href=URL.createObjectURL(s.snipBlob);a.download=s.name.replace(/\s+/g,'_')+'.png';a.click();}
+  function downloadSnip(i){const s=fileStates[i];if(!s||!s.snipBlob)return;const a=document.createElement('a');a.href=URL.createObjectURL(s.snipBlob);const nm=($(`rename-${i}`)?.value||s.name).trim().replace(/\s+/g,'_')||'snip';a.download=nm+'.png';a.click();}
 
   function skeletonRows(){return Array.from({length:5},(_,j)=>`<tr class="skeleton-row"><td></td><td></td><td><div class="skel" style="width:${40+j*8}px"></div></td><td><div class="skel" style="width:${80+j*12}px"></div></td><td><div class="skel" style="width:40px"></div></td><td></td></tr>`).join('');}
   function switchTab(i){document.querySelectorAll('.tab-btn').forEach((b,j)=>b.classList.toggle('active',j===i));document.querySelectorAll('.tab-panel').forEach((p,j)=>p.classList.toggle('active',j===i));}
@@ -716,14 +730,15 @@
     });
     const csv=[hdr,...rows].map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
     const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
-    a.download=s.name.replace(/\.(pdf|png|jpe?g)$/i,'')+'_rooms.csv';a.click();
+    const csvName=($(`rename-${i}`)?.value||s.name).trim().replace(/\s+/g,'_')||'rooms';a.download=csvName+'_rooms.csv';a.click();
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────
   function setStatus(msg,done=false){statusTextEl.textContent=msg;statusBar.classList.add('visible');if(done){statusDot.style.animation='none';statusDot.style.background='var(--green)';}else{statusDot.style.animation='';statusDot.style.background='';}}
   function updateKeyIndicator(){apiKeyBtn.className=anthropicKey&&googleKey?'api-key-btn keys-set':anthropicKey||googleKey?'api-key-btn partial':'api-key-btn';}
   // Auto-open key modal if Anthropic key not set
-  if(!anthropicKey){setTimeout(()=>{modalBackdrop.classList.add('visible');keyAnthropic.focus();},400);}
+  // Always prompt for keys on load
+  setTimeout(()=>{if(!anthropicKey){modalBackdrop.classList.add('visible');keyAnthropic.focus();}},400);
   function posTooltip(e){tooltip.style.left=(e.clientX+14)+'px';tooltip.style.top=(e.clientY-10)+'px';}
   function toBase64(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(file);});}
   function toArrayBuffer(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsArrayBuffer(file);});}
