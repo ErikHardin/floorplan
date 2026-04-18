@@ -280,9 +280,9 @@
   pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   const $=id=>document.getElementById(id);
 
-  // ── Hardcoded API Keys ─────────────────────────────────────────────────────
-  let anthropicKey='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';
-  let googleKey='AIzaSyA5yF0JrLS9XHLZcgl045yqUHBIqIAGNqg';
+  // ── API Keys — saved in localStorage so you only enter them once ──────────
+  let anthropicKey=localStorage.getItem('fpr_anthropic_key')||'';
+  let googleKey=localStorage.getItem('fpr_google_key')||'AIzaSyA5yF0JrLS9XHLZcgl045yqUHBIqIAGNqg';
 
   // ── API Key modal (for updating keys if needed) ────────────────────────────
   const apiKeyBtn=$('apiKeyBtn'),modalBackdrop=$('modalBackdrop');
@@ -302,9 +302,11 @@
   saveKeyBtn.addEventListener('click',()=>{
     const ak=keyAnthropic.value.trim(),gk=keyGoogle.value.trim();
     if(!ak&&!gk){keyStatusMsg.textContent='Please enter at least one key.';keyStatusMsg.className='key-status-msg err';return;}
-    anthropicKey=ak||anthropicKey;googleKey=gk||googleKey;
-    keyStatusMsg.textContent='✓ Keys updated.';keyStatusMsg.className='key-status-msg ok';
-    setTimeout(()=>modalBackdrop.classList.remove('visible'),700);
+    if(ak){anthropicKey=ak;localStorage.setItem('fpr_anthropic_key',ak);}
+    if(gk){googleKey=gk;localStorage.setItem('fpr_google_key',gk);}
+    updateKeyIndicator();
+    keyStatusMsg.textContent='✓ Keys saved — remembered in this browser.';keyStatusMsg.className='key-status-msg ok';
+    setTimeout(()=>modalBackdrop.classList.remove('visible'),900);
   });
 
   // ── File helpers ───────────────────────────────────────────────────────────
@@ -719,6 +721,9 @@
 
   // ── Helpers ────────────────────────────────────────────────────────────────
   function setStatus(msg,done=false){statusTextEl.textContent=msg;statusBar.classList.add('visible');if(done){statusDot.style.animation='none';statusDot.style.background='var(--green)';}else{statusDot.style.animation='';statusDot.style.background='';}}
+  function updateKeyIndicator(){apiKeyBtn.className=anthropicKey&&googleKey?'api-key-btn keys-set':anthropicKey||googleKey?'api-key-btn partial':'api-key-btn';}
+  // Auto-open key modal if Anthropic key not set
+  if(!anthropicKey){setTimeout(()=>{modalBackdrop.classList.add('visible');keyAnthropic.focus();},400);}
   function posTooltip(e){tooltip.style.left=(e.clientX+14)+'px';tooltip.style.top=(e.clientY-10)+'px';}
   function toBase64(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(file);});}
   function toArrayBuffer(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsArrayBuffer(file);});}
