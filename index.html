@@ -37,35 +37,7 @@
     body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;padding:36px 20px 80px}
     .container{max-width:1200px;margin:0 auto}
 
-    /* API key button */
-    .api-key-btn{position:fixed;top:16px;right:16px;z-index:500;width:34px;height:34px;border-radius:50%;background:var(--surface);border:1px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:var(--shadow);transition:all .2s;opacity:.55}
-    .api-key-btn:hover{opacity:1;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
-    .api-key-btn.keys-set{opacity:1;border-color:var(--green);box-shadow:0 0 0 3px var(--green-dim)}
 
-    /* Modal */
-    .modal-backdrop{display:none;position:fixed;inset:0;background:rgba(100,110,130,.35);z-index:600;align-items:center;justify-content:center;backdrop-filter:blur(2px)}
-    .modal-backdrop.visible{display:flex}
-    .modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:28px;width:100%;max-width:460px;box-shadow:var(--shadow-md)}
-    .modal-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px}
-    .modal-sub{font-size:11px;color:var(--text3);margin-bottom:20px;line-height:1.6}
-    .modal-sub a{color:var(--accent);text-decoration:none}
-    .key-group{margin-bottom:14px}
-    .key-group-label{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:5px;display:flex;align-items:center;gap:6px}
-    .key-set-dot{width:6px;height:6px;border-radius:50%;background:var(--border);flex-shrink:0}
-    .key-set-dot.set{background:var(--green)}
-    .key-input-wrap{position:relative}
-    .key-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:9px 38px 9px 12px;font-family:'DM Mono',monospace;font-size:12px;color:var(--text);outline:none;transition:border-color .15s,box-shadow .15s}
-    .key-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
-    .key-input::placeholder{color:var(--muted)}
-    .key-toggle{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:0;line-height:1}
-    .modal-actions{display:flex;gap:8px;margin-top:6px}
-    .btn-save-key{flex:1;padding:9px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:background .15s}
-    .btn-save-key:hover{background:#1d4ed8}
-    .btn-cancel-key{padding:9px 16px;background:var(--surface2);border:1px solid var(--border);color:var(--text3);border-radius:6px;font-family:'DM Mono',monospace;font-size:12px;cursor:pointer;transition:all .15s}
-    .btn-cancel-key:hover{border-color:var(--danger);color:var(--danger)}
-    .key-status-msg{font-size:11px;margin-top:8px;min-height:14px}
-    .key-status-msg.ok{color:var(--green)}
-    .key-status-msg.err{color:var(--danger)}
 
     /* Header */
     header{margin-bottom:32px}
@@ -220,27 +192,7 @@
 </head>
 <body>
 
-<button class="api-key-btn" id="apiKeyBtn" title="API Keys">🔑</button>
 
-<div class="modal-backdrop" id="modalBackdrop">
-  <div class="modal">
-    <div class="modal-title">API Keys</div>
-    <div class="modal-sub">Stored in memory only — never saved or sent anywhere except their respective APIs.</div>
-    <div class="key-group">
-      <div class="key-group-label"><span class="key-set-dot set" id="dot-anthropic"></span>Anthropic (room extraction) &nbsp;·&nbsp; <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a></div>
-      <div class="key-input-wrap"><input class="key-input" type="password" id="keyAnthropic" autocomplete="off" spellcheck="false"/><button class="key-toggle" data-target="keyAnthropic">👁</button></div>
-    </div>
-    <div class="key-group">
-      <div class="key-group-label"><span class="key-set-dot set" id="dot-google"></span>Google Vision (text location) &nbsp;·&nbsp; <a href="https://console.cloud.google.com" target="_blank">console.cloud.google.com</a></div>
-      <div class="key-input-wrap"><input class="key-input" type="password" id="keyGoogle" autocomplete="off" spellcheck="false"/><button class="key-toggle" data-target="keyGoogle">👁</button></div>
-    </div>
-    <div class="modal-actions">
-      <button class="btn-save-key" id="saveKeyBtn">Update Keys</button>
-      <button class="btn-cancel-key" id="cancelKeyBtn">Cancel</button>
-    </div>
-    <div class="key-status-msg" id="keyStatusMsg"></div>
-  </div>
-</div>
 
 <div class="container">
   <header>
@@ -286,33 +238,7 @@
   pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   const $=id=>document.getElementById(id);
 
-  // ── API Keys — entered manually each session ──────────────────────────────
-  let anthropicKey="";
-  let googleKey="AIzaSyA5yF0JrLS9XHLZcgl045yqUHBIqIAGNqg";
-
-  // ── API Key modal (for updating keys if needed) ────────────────────────────
-  const apiKeyBtn=$('apiKeyBtn'),modalBackdrop=$('modalBackdrop');
-  const keyAnthropic=$('keyAnthropic'),keyGoogle=$('keyGoogle');
-  const saveKeyBtn=$('saveKeyBtn'),cancelKeyBtn=$('cancelKeyBtn'),keyStatusMsg=$('keyStatusMsg');
-
-  apiKeyBtn.addEventListener('click',()=>{
-    keyAnthropic.value=anthropicKey;keyGoogle.value=googleKey;
-    keyStatusMsg.textContent='';keyStatusMsg.className='key-status-msg';
-    modalBackdrop.classList.add('visible');setTimeout(()=>keyAnthropic.focus(),50);
-  });
-  cancelKeyBtn.addEventListener('click',()=>modalBackdrop.classList.remove('visible'));
-  modalBackdrop.addEventListener('click',e=>{if(e.target===modalBackdrop)modalBackdrop.classList.remove('visible');});
-  document.querySelectorAll('.key-toggle').forEach(btn=>{
-    btn.addEventListener('click',()=>{const inp=$(btn.dataset.target);inp.type=inp.type==='password'?'text':'password';});
-  });
-  saveKeyBtn.addEventListener('click',()=>{
-    const ak=keyAnthropic.value.trim(),gk=keyGoogle.value.trim();
-    if(!ak&&!gk){keyStatusMsg.textContent='Please enter at least one key.';keyStatusMsg.className='key-status-msg err';return;}
-    anthropicKey=ak||anthropicKey;googleKey=gk||googleKey;
-    updateKeyIndicator();
-    keyStatusMsg.textContent='✓ Keys saved.';keyStatusMsg.className='key-status-msg ok';
-    setTimeout(()=>modalBackdrop.classList.remove('visible'),700);
-  });
+  // ── API keys stored securely in Cloudflare Worker (floorplan.erikchardin.workers.dev) ──
 
   // ── File helpers ───────────────────────────────────────────────────────────
   function fileType(f){if(f.type==='application/pdf')return'pdf';if(f.type.startsWith('image/'))return'image';const e=f.name.split('.').pop().toLowerCase();return e==='pdf'?'pdf':['png','jpg','jpeg'].includes(e)?'image':null;}
@@ -369,7 +295,6 @@
   // ── Extract ────────────────────────────────────────────────────────────────
   extractBtn.addEventListener('click',async()=>{
     if(!fileStates.length)return;
-    if(!anthropicKey){showError('Anthropic API key missing.');return;}
     errorBox.classList.remove('visible');
     extractBtn.classList.add('loading');extractBtn.disabled=true;
     fileStates.forEach(s=>{s.rooms=null;s.b64=null;s.pdfDoc=null;s.visionWords=[];});
@@ -410,7 +335,7 @@
   async function runClaude(s){
     const mt=s.type==='pdf'?'application/pdf':(s.file.type==='image/png'?'image/png':'image/jpeg');
     const cb=s.type==='pdf'?{type:'document',source:{type:'base64',media_type:mt,data:s.b64}}:{type:'image',source:{type:'base64',media_type:mt,data:s.b64}};
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':anthropicKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:4000,messages:[{role:'user',content:[cb,{type:'text',text:`Analyze this floor plan and extract every labeled room. Return JSON only, no markdown:\n{"rooms":[{"room_number":"","room_name":"","floor":"","notes":"","page":1}]}`}]}]})});
+    const resp=await fetch('https://floorplan.erikchardin.workers.dev/anthropic',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:4000,messages:[{role:'user',content:[cb,{type:'text',text:`Analyze this floor plan and extract every labeled room. Return JSON only, no markdown:\n{"rooms":[{"room_number":"","room_name":"","floor":"","notes":"","page":1}]}`}]}]})}));
     if(!resp.ok){const e=await resp.json().catch(()=>({}));throw new Error(e?.error?.message||`Claude API error ${resp.status}`);}
     const data=await resp.json();
     const raw=data.content.map(b=>b.text||'').join('');
@@ -422,7 +347,7 @@
   async function runGoogleVision(s){
     let imageB64=s.b64,mimeType=s.file.type==='image/png'?'image/png':'image/jpeg';
     if(s.type==='pdf'){imageB64=await pdfPageToBase64(s,1);mimeType='image/png';}
-    const resp=await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${googleKey}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requests:[{image:{content:imageB64},features:[{type:'TEXT_DETECTION',maxResults:500}]}]})});
+    const resp=await fetch('https://floorplan.erikchardin.workers.dev/vision',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requests:[{image:{content:imageB64},features:[{type:'TEXT_DETECTION',maxResults:500}]}]})}));
     if(!resp.ok){console.warn('Google Vision error',resp.status);return[];}
     const data=await resp.json();
     const ann=data.responses?.[0]?.textAnnotations||[];
@@ -815,10 +740,7 @@
 
   // ── Helpers ────────────────────────────────────────────────────────────────
   function setStatus(msg,done=false){statusTextEl.textContent=msg;statusBar.classList.add('visible');if(done){statusDot.style.animation='none';statusDot.style.background='var(--green)';}else{statusDot.style.animation='';statusDot.style.background='';}}
-  function updateKeyIndicator(){apiKeyBtn.className=anthropicKey&&googleKey?'api-key-btn keys-set':anthropicKey||googleKey?'api-key-btn partial':'api-key-btn';}
   // Auto-open key modal if Anthropic key not set
-  // Always prompt for keys on load
-  setTimeout(()=>{if(!anthropicKey){modalBackdrop.classList.add('visible');keyAnthropic.focus();}},400);
   function posTooltip(e){tooltip.style.left=(e.clientX+14)+'px';tooltip.style.top=(e.clientY-10)+'px';}
   function toBase64(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(file);});}
   function toArrayBuffer(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsArrayBuffer(file);});}
