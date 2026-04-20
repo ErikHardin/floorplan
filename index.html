@@ -335,7 +335,7 @@
   async function runClaude(s){
     const mt=s.type==='pdf'?'application/pdf':(s.file.type==='image/png'?'image/png':'image/jpeg');
     const cb=s.type==='pdf'?{type:'document',source:{type:'base64',media_type:mt,data:s.b64}}:{type:'image',source:{type:'base64',media_type:mt,data:s.b64}};
-    const resp=await fetch('https://floorplan.erikchardin.workers.dev/anthropic',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:4000,messages:[{role:'user',content:[cb,{type:'text',text:`Analyze this floor plan and extract every labeled room. Return JSON only, no markdown:\n{"rooms":[{"room_number":"","room_name":"","floor":"","notes":"","page":1}]}`}]}]})}));
+    const resp=await fetch('https://floorplan.erikchardin.workers.dev/anthropic',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:4000,messages:[{role:'user',content:[cb,{type:'text',text:`Analyze this floor plan and extract every labeled room. Return JSON only, no markdown:\n{"rooms":[{"room_number":"","room_name":"","floor":"","notes":"","page":1}]}`}]}]})});
     if(!resp.ok){const e=await resp.json().catch(()=>({}));throw new Error(e?.error?.message||`Claude API error ${resp.status}`);}
     const data=await resp.json();
     const raw=data.content.map(b=>b.text||'').join('');
@@ -347,7 +347,7 @@
   async function runGoogleVision(s){
     let imageB64=s.b64,mimeType=s.file.type==='image/png'?'image/png':'image/jpeg';
     if(s.type==='pdf'){imageB64=await pdfPageToBase64(s,1);mimeType='image/png';}
-    const resp=await fetch('https://floorplan.erikchardin.workers.dev/vision',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requests:[{image:{content:imageB64},features:[{type:'TEXT_DETECTION',maxResults:500}]}]})}));
+    const resp=await fetch('https://floorplan.erikchardin.workers.dev/vision',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requests:[{image:{content:imageB64},features:[{type:'TEXT_DETECTION',maxResults:500}]}]})});
     if(!resp.ok){console.warn('Google Vision error',resp.status);return[];}
     const data=await resp.json();
     const ann=data.responses?.[0]?.textAnnotations||[];
