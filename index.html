@@ -130,7 +130,7 @@
     .pdf-canvas-wrap canvas.pdf-c{display:block;width:100%;height:auto}
     .pdf-canvas-wrap canvas.hl-c{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
     .pdf-canvas-wrap canvas.snip-c{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:3}
-    .pdf-canvas-wrap.snipping canvas.snip-c{pointer-events:all;cursor:crosshair}
+    .pdf-canvas-wrap.snipping canvas.snip-c{pointer-events:all;cursor:crosshair;touch-action:none}
     .viewer-img{display:block;width:100%;height:auto;border-radius:9px}
     .viewer-footer{display:flex;align-items:center;gap:8px;margin-top:8px;min-height:30px}
     .btn-snip{padding:5px 12px;background:var(--surface);border:1px solid var(--amber-border);color:var(--amber);border-radius:5px;font-family:'DM Mono',monospace;font-size:11px;cursor:pointer;transition:background .15s;flex-shrink:0;box-shadow:var(--shadow)}
@@ -403,7 +403,7 @@
     const idx=snipSourceIdx;snipMode=false;snipSourceIdx=-1;
     const wrap=$(`wrap-${idx}`);if(wrap)wrap.classList.remove('snipping');
     const sc=$(`snipC-${idx}`);
-    if(sc){sc.getContext('2d').clearRect(0,0,sc.width,sc.height);sc.removeEventListener('mousedown',sc._md);sc.removeEventListener('mousemove',sc._mm);sc.removeEventListener('mouseup',sc._mu);}
+    if(sc){sc.getContext('2d').clearRect(0,0,sc.width,sc.height);sc.removeEventListener('mousedown',sc._md);sc.removeEventListener('mousemove',sc._mm);sc.removeEventListener('mouseup',sc._mu);sc.removeEventListener('touchstart',sc._ts);sc.removeEventListener('touchmove',sc._tm);sc.removeEventListener('touchend',sc._te);}
     const tb=$(`snip-tb-${idx}`);if(tb)tb.classList.remove('visible');
     const btn=$(`snip-btn-${idx}`);if(btn){btn.textContent='✂️ Snip Section';btn.classList.remove('active');}
   }
@@ -420,27 +420,47 @@
     if(!sc)return;
     const wrap=$(`wrap-${sourceIdx}`);sc.width=wrap.clientWidth;sc.height=wrap.clientHeight;
     let dragging=false,startX=0,startY=0;
-    const md=e=>{if(!snipMode)return;const r=sc.getBoundingClientRect();startX=e.clientX-r.left;startY=e.clientY-r.top;dragging=true;};
-    const mm=e=>{
-      if(!dragging||!snipMode)return;
-      const r=sc.getBoundingClientRect();const cx=e.clientX-r.left,cy=e.clientY-r.top;
-      const ctx=sc.getContext('2d');ctx.clearRect(0,0,sc.width,sc.height);
+    // ── Shared coordinate helpers ──────────────────────────────────────────
+    function getCoords(e, rect) {
+      if (e.touches) {
+        const t = e.touches[0] || e.changedTouches[0];
+        return { x: t.clientX - rect.left, y: t.clientY - rect.top };
+      }
+      return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    }
+
+    function drawSelection(ctx, rx, ry, rw, rh) {
+      ctx.clearRect(0,0,sc.width,sc.height);
       ctx.fillStyle='rgba(0,0,0,.18)';ctx.fillRect(0,0,sc.width,sc.height);
-      const rx=Math.min(startX,cx),ry=Math.min(startY,cy),rw=Math.abs(cx-startX),rh=Math.abs(cy-startY);
       ctx.clearRect(rx,ry,rw,rh);
       ctx.strokeStyle='rgba(180,83,9,.9)';ctx.lineWidth=2;ctx.setLineDash([6,3]);ctx.strokeRect(rx,ry,rw,rh);ctx.setLineDash([]);
-      ctx.fillStyle='#b45309';[[rx,ry],[rx+rw,ry],[rx,ry+rh],[rx+rw,ry+rh]].forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fill();});
+      ctx.fillStyle='#b45309';[[rx,ry],[rx+rw,ry],[rx,ry+rh],[rx+rw,ry+rh]].forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fill();});
+    }
+
+    // ── Mouse events ────────────────────────────────────────────────────────
+    const md=e=>{if(!snipMode)return;const r=sc.getBoundingClientRect();const{x,y}=getCoords(e,r);startX=x;startY=y;dragging=true;};
+    const mm=e=>{
+      if(!dragging||!snipMode)return;
+      const r=sc.getBoundingClientRect();const{x:cx,y:cy}=getCoords(e,r);
+      drawSelection(sc.getContext('2d'),Math.min(startX,cx),Math.min(startY,cy),Math.abs(cx-startX),Math.abs(cy-startY));
     };
     const mu=async e=>{
       if(!dragging||!snipMode)return;dragging=false;
-      const r=sc.getBoundingClientRect();const cx=e.clientX-r.left,cy=e.clientY-r.top;
+      const r=sc.getBoundingClientRect();const{x:cx,y:cy}=getCoords(e,r);
       const rx=Math.min(startX,cx),ry=Math.min(startY,cy),rw=Math.abs(cx-startX),rh=Math.abs(cy-startY);
-      const ctx=sc.getContext('2d');ctx.clearRect(0,0,sc.width,sc.height);
+      sc.getContext('2d').clearRect(0,0,sc.width,sc.height);
       if(rw<10||rh<10)return;
       await captureSnip(sourceIdx,rx,ry,rw,rh,sc);
     };
-    sc._md=md;sc._mm=mm;sc._mu=mu;
+
+    // ── Touch events ────────────────────────────────────────────────────────
+    const ts=e=>{if(!snipMode)return;e.preventDefault();const r=sc.getBoundingClientRect();const{x,y}=getCoords(e,r);startX=x;startY=y;dragging=true;};
+    const tm=e=>{if(!dragging||!snipMode)return;e.preventDefault();const r=sc.getBoundingClientRect();const{x:cx,y:cy}=getCoords(e,r);drawSelection(sc.getContext('2d'),Math.min(startX,cx),Math.min(startY,cy),Math.abs(cx-startX),Math.abs(cy-startY));};
+    const te=async e=>{if(!dragging||!snipMode)return;e.preventDefault();dragging=false;const r=sc.getBoundingClientRect();const{x:cx,y:cy}=getCoords(e,r);const rx=Math.min(startX,cx),ry=Math.min(startY,cy),rw=Math.abs(cx-startX),rh=Math.abs(cy-startY);sc.getContext('2d').clearRect(0,0,sc.width,sc.height);if(rw<10||rh<10)return;await captureSnip(sourceIdx,rx,ry,rw,rh,sc);};
+
+    sc._md=md;sc._mm=mm;sc._mu=mu;sc._ts=ts;sc._tm=tm;sc._te=te;
     sc.addEventListener('mousedown',md);sc.addEventListener('mousemove',mm);sc.addEventListener('mouseup',mu);
+    sc.addEventListener('touchstart',ts,{passive:false});sc.addEventListener('touchmove',tm,{passive:false});sc.addEventListener('touchend',te,{passive:false});
   }
 
   async function captureSnip(sourceIdx,rx,ry,rw,rh,snipCanvas){
