@@ -323,7 +323,7 @@
         showSnipPrompt(i);
         return;
       }
-      const[rooms,visionWords]=await Promise.all([runClaude(s),googleKey?runGoogleVision(s):Promise.resolve([])]);
+      const[rooms,visionWords]=await Promise.all([runClaude(s),runGoogleVision(s)]);
       s.rooms=rooms.map(r=>({...r,bbox:null,included:true}));s.visionWords=visionWords;
       matchRoomsToVision(s);
       populateTable(s,i);updateTabBadge(i,s.rooms.length);
